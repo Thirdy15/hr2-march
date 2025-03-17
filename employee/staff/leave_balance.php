@@ -3,17 +3,17 @@ session_start();
 include '../db/db_conn.php';
 
 // Ensure the employee is logged in
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
 // Get the logged-in employee's ID from the session
-$employee_id = $_SESSION['e_id'];
+$employee_id = $_SESSION['employee_id'];
 
 // Fetch the employee's details from the database
-$sql = "SELECT e_id, firstname, lastname, role, department, available_leaves FROM employee_register WHERE e_id = ?";
+$sql = "SELECT employee_id, first_name, last_name, role, department, available_leaves FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employee_id);
+$stmt->bind_param("s", $employee_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -105,8 +105,8 @@ $conn->close();
             </thead>
             <tbody id="leave-table">
                 <tr>
-                    <td><?php echo htmlspecialchars($employee['e_id']); ?></td>
-                    <td><?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?></td>
+                    <td><?php echo htmlspecialchars($employee['employee_id']); ?></td>
+                    <td><?php echo htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']); ?></td>
                     <td><?php echo htmlspecialchars($employee['role']); ?></td>
                     <td><?php echo htmlspecialchars($employee['department']); ?></td>
                     <td><?php echo htmlspecialchars($employee['available_leaves']); ?> remaining</td>

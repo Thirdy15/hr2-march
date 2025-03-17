@@ -3,7 +3,7 @@ session_start();
 include '../../db/db_conn.php';
 include '../../phpqrcode/qrlib.php'; // Include phpqrcode library
 
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
@@ -15,10 +15,10 @@ if (isset($_SESSION['update_success'])) {
 }
 
 // Fetch user info
-$employeeId = $_SESSION['e_id'];
-$sql = "SELECT e_id, firstname, middlename, lastname, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE e_id = ?";
+$employeeId = $_SESSION['employee_id'];
+$sql = "SELECT employee_id, first_name, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
@@ -26,7 +26,7 @@ $stmt->close();
 $conn->close();
 
 // Generate QR Code content
-$qrData = 'Employee ID: ' . $employeeInfo['e_id'] . ' | Email: ' . $employeeInfo['email'];
+$qrData = 'Employee ID: ' . $employeeInfo['employee_id'] . ' | Email: ' . $employeeInfo['email'];
 
 $qrCodeDir = '../qrcodes/';
 if (!is_dir($qrCodeDir)) {
@@ -109,7 +109,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                                 <span class="big text-light mb-1">
                                     <?php
                                         if ($employeeInfo) {
-                                        echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']);
+                                        echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']);
                                         } else {
                                         echo "Employee information not available.";
                                         }
@@ -232,7 +232,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                                                 <!-- Form to handle profile picture deletion -->
                                             <form action="../../employee_db/delete_employee_pfp.php" method="post">
                                                 <!-- Hidden input to send the admin_id to the backend -->
-                                                <input type="hidden" name="employeeId" value="<?php echo $employeeInfo['e_id']; ?>">
+                                                <input type="hidden" name="employeeId" value="<?php echo $employeeInfo['employee_id']; ?>">
                                                 
                                                 <button class="dropdown-item" type="submit" onclick="return confirm('Are you sure you want to delete your profile picture?');">
                                                     Delete Profile Picture
@@ -250,11 +250,11 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                                     <table class="table text-light mt-3 text-start">
                                         <tr>
                                             <td>Name:</td>
-                                            <td><?php echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']); ?></td>
+                                            <td><?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']); ?></td>
                                         </tr>
                                         <tr>
                                             <td>ID:</td>
-                                            <td>#<?php echo htmlspecialchars($employeeInfo['e_id']); ?></td>
+                                            <td>#<?php echo htmlspecialchars($employeeInfo['employee_id']); ?></td>
                                         </tr>
                                         <tr>
                                             <td>Role:</td>
@@ -287,19 +287,19 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                                         <div class="row mb-3">
                                             <label for="inputfName" class="col-sm-2 col-form-label text-light">First Name:</label>
                                             <div class="col-sm-9">
-                                                <input type="text" class="form-control bg-dark text-light border border-light" id="inputfName" name="firstname" value="<?php echo htmlspecialchars($employeeInfo['firstname']); ?>" readonly>
+                                                <input type="text" class="form-control bg-dark text-light border border-light" id="inputfName" name="firstname" value="<?php echo htmlspecialchars($employeeInfo['first_name']); ?>" readonly>
                                             </div>
                                         </div>
                                         <div class="row mb-3">
                                             <label for="inputmName" class="col-sm-2 col-form-label text-light">Middle Name:</label>
                                             <div class="col-sm-9"> 
-                                                <input type="text" class="form-control bg-dark text-light border border-light" id="inputmName" name="middlename" value="<?php echo htmlspecialchars($employeeInfo['middlename']); ?>" readonly>
+                                                <input type="text" class="form-control bg-dark text-light border border-light" id="inputmName" name="middlename" value="<?php echo htmlspecialchars($employeeInfo['middle_name']); ?>" readonly>
                                             </div>
                                         </div>
                                         <div class="row mb-3">
                                             <label for="inputlName" class="col-sm-2 col-form-label text-light">Last Name:</label>
                                             <div class="col-sm-9">
-                                                <input type="text" class="form-control bg-dark text-light border border-light" id="inputlName" name="lastname" value="<?php echo htmlspecialchars($employeeInfo['lastname']); ?>" readonly>
+                                                <input type="text" class="form-control bg-dark text-light border border-light" id="inputlName" name="lastname" value="<?php echo htmlspecialchars($employeeInfo['last_name']); ?>" readonly>
                                             </div>
                                         </div>
                                         <div class="row mb-3">
@@ -348,8 +348,8 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                             <div class="modal-body text-center">
                                 <!-- Display the generated QR code -->
                                 <img src="<?php echo $qrImagePath; ?>" alt="QR Code" class="img-fluid border border-light" width="200">
-                                <p class="mt-3">Employee ID: <?php echo htmlspecialchars($employeeInfo['e_id']); ?></p>
-                                <p>Name: <?php echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']); ?></p>
+                                <p class="mt-3">Employee ID: <?php echo htmlspecialchars($employeeInfo['employee_id']); ?></p>
+                                <p>Name: <?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']); ?></p>
                             </div>
                             <div class="modal-footer boder-1 border-warning">
                                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>

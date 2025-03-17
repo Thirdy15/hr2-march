@@ -2,17 +2,17 @@
 session_start();
 include '../db/db_conn.php';
 
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
 
-$employeeId = $_SESSION['e_id'];
+$employeeId = $_SESSION['employee_id'];
 
 // Fetch the leave requests of the logged-in employee
-$sql = "SELECT * FROM leave_requests WHERE e_id = ?";
+$sql = "SELECT * FROM leave_requests WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param('i', $employeeId);
+$stmt->bind_param('s', $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 ?>

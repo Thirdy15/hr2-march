@@ -2,16 +2,16 @@
 session_start();
 include '../../db/db_conn.php';
 
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
 
 // Fetch user info from the employee_register table
-$employeeId = $_SESSION['e_id'];
-$sql = "SELECT e_id, firstname, middlename, lastname, birthdate, gender, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE e_id = ?";
+$employeeId = $_SESSION['employee_id'];
+$sql = "SELECT employee_id, first_name, middle_name, last_name, birthdate, gender, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
@@ -31,7 +31,7 @@ $leavesQuery = "SELECT
                 FROM employee_leaves 
                 WHERE employee_id = ?";
 $leavesStmt = $conn->prepare($leavesQuery);
-$leavesStmt->bind_param("i", $employeeId);
+$leavesStmt->bind_param("s", $employeeId);
 $leavesStmt->execute();
 $leavesResult = $leavesStmt->get_result();
 $leavesInfo = $leavesResult->fetch_assoc();
@@ -50,10 +50,10 @@ if (!$leavesInfo) {
 // Fetch the used leave by summing up approved leave days
 $usedLeaveQuery = "SELECT start_date, end_date, SUM(DATEDIFF(end_date, start_date) + 1) AS used_leaves 
                    FROM leave_requests 
-                   WHERE e_id = ? AND status = 'approved'
-                   GROUP BY e_id";
+                   WHERE employee_id = ? AND status = 'approved'
+                   GROUP BY employee_id";
 $usedLeaveStmt = $conn->prepare($usedLeaveQuery);
-$usedLeaveStmt->bind_param("i", $employeeId);
+$usedLeaveStmt->bind_param("s", $employeeId);
 $usedLeaveStmt->execute();
 $usedLeaveResult = $usedLeaveStmt->get_result();
 $usedLeaveRow = $usedLeaveResult->fetch_assoc();
@@ -159,7 +159,7 @@ $conn->close();
                                 <span class="big text-light mb-1">
                                     <?php
                                         if ($employeeInfo) {
-                                        echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']);
+                                        echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']);
                                         } else {
                                         echo "User information not available.";
                                         }
@@ -307,7 +307,7 @@ $conn->close();
                                                     <label for="name" class="fw-bold position-absolute text-light" 
                                                         style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Name:</label>
                                                     <input type="text" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="name" name="name" value="<?php echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['lastname']); ?>" readonly>
+                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="name" name="name" value="<?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['last_name']); ?>" readonly>
                                                 </div>
                                             </div>
                                             <div class="col-md-6 mb-3">

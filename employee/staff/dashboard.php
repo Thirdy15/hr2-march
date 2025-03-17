@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
@@ -8,10 +8,10 @@ if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['pos
 include '../../db/db_conn.php';
 
 // Fetch user info
-$employeeId = $_SESSION['e_id'];
-$sql = "SELECT firstname, middlename, lastname, email, role, position, pfp FROM employee_register WHERE e_id = ?";
+$employeeId = $_SESSION['employee_id'];
+$sql = "SELECT first_name, middle_name, last_name, email, role, position, pfp FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
@@ -86,7 +86,7 @@ $profilePicture = !empty($employeeInfo['profile_picture']) ? $employeeInfo['prof
                             </li>
                             <li class="nav-item text-light d-flex ms-3 flex-column align-items-center text-center">
                                 <span class="big text-light mb-1">
-                                    <?php echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']); ?>
+                                    <?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']); ?>
                                 </span>
                                 <span class="big text-light">
                                     <?php echo htmlspecialchars($employeeInfo['position']); ?>

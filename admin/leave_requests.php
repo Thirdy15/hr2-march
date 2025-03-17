@@ -55,7 +55,7 @@ $sql = "SELECT e.department, e.employee_id, e.first_name, e.last_name, lr.start_
                el.bereavement_leave, el.emergency_leave, el.maternity_leave, el.mcw_special_leave, el.parental_leave,
                el.service_incentive_leave, el.sick_leave, el.vacation_leave, el.vawc_leave, el.bereavement_leave_male,
                el.emergency_leave_male, el.parental_leave_male, el.paternity_leave_male, el.service_incentive_leave_male,
-               el.sick_leave_male, el.vacation_leave_male
+               el.sick_leave_male, el.vacation_leave_male, lr.leave_category
         FROM leave_requests lr
         JOIN employee_register e ON lr.employee_id = e.employee_id
         JOIN employee_leaves el ON el.employee_id = e.employee_id
@@ -69,6 +69,7 @@ if ($action_result->num_rows > 0) {
     $row = $action_result->fetch_assoc();
     
     // Determine which leave type column to use based on gender and leave_type
+    $leave_category = $row['leave_category']; // Add this line
     $leave_type = $row['leave_type'];
     $gender = $row['gender'];
     
@@ -124,65 +125,111 @@ if ($action_result->num_rows > 0) {
     }
 
     if ($status === 'approve') {
-        if ($leave_days > $available_balance) {
-            header("Location: ../admin/leave_requests.php?status=insufficient_balance");
-            exit();
-        } else {
-            $new_balance = $available_balance - $leave_days;
-
-            // Prepare the update query based on the leave type
-            switch ($leave_type) {
-                case 'Bereavement Leave':
-                    $balance_field = ($gender === 'Male') ? 'bereavement_leave_male' : 'bereavement_leave';
-                    break;
-                case 'Emergency Leave':
-                    $balance_field = ($gender === 'Male') ? 'emergency_leave_male' : 'emergency_leave';
-                    break;
-                case 'Maternity Leave':
-                    $balance_field = 'maternity_leave';
-                    break;
-                case 'MCW Special Leave':
-                    $balance_field = 'mcw_special_leave';
-                    break;
-                case 'Parental Leave':
-                    $balance_field = ($gender === 'Male') ? 'parental_leave_male' : 'parental_leave';
-                    break;
-                case 'Paternity Leave':
-                    $balance_field = 'paternity_leave_male'; // Only for male employees
-                    break;
-                case 'Service Incentive Leave':
-                    $balance_field = ($gender === 'Male') ? 'service_incentive_leave_male' : 'service_incentive_leave';
-                    break;
-                case 'Sick Leave':
-                    $balance_field = ($gender === 'Male') ? 'sick_leave_male' : 'sick_leave';
-                    break;
-                case 'Vacation Leave':
-                    $balance_field = ($gender === 'Male') ? 'vacation_leave_male' : 'vacation_leave';
-                    break;
-                case 'VAWC Leave':
-                    $balance_field = 'vawc_leave';
-                    break;
-                default:
-                    $balance_field = ''; // Default to an empty field
-                    break;
+        // Check if the leave is paid or unpaid
+        if ($leave_category === 'Paid Leave') { // Assuming $leave_category is either 'Paid Leave' or 'Unpaid Leave'
+            // Check if the employee has sufficient leave balance
+            if ($leave_days > $available_balance) {
+                header("Location: ../admin/leave_requests.php?status=insufficient_balance");
+                exit();
+            } else {
+                // Deduct the leave days from the available balance
+                $new_balance = $available_balance - $leave_days;
+    
+                // Determine the balance field based on the leave type and gender
+                switch ($leave_type) {
+                    case 'Bereavement Leave':
+                        $balance_field = ($gender === 'Male') ? 'bereavement_leave_male' : 'bereavement_leave';
+                        break;
+                    case 'Emergency Leave':
+                        $balance_field = ($gender === 'Male') ? 'emergency_leave_male' : 'emergency_leave';
+                        break;
+                    case 'Maternity Leave':
+                        $balance_field = 'maternity_leave';
+                        break;
+                    case 'MCW Special Leave':
+                        $balance_field = 'mcw_special_leave';
+                        break;
+                    case 'Parental Leave':
+                        $balance_field = ($gender === 'Male') ? 'parental_leave_male' : 'parental_leave';
+                        break;
+                    case 'Paternity Leave':
+                        $balance_field = 'paternity_leave_male'; // Only for male employees
+                        break;
+                    case 'Service Incentive Leave':
+                        $balance_field = ($gender === 'Male') ? 'service_incentive_leave_male' : 'service_incentive_leave';
+                        break;
+                    case 'Sick Leave':
+                        $balance_field = ($gender === 'Male') ? 'sick_leave_male' : 'sick_leave';
+                        break;
+                    case 'Vacation Leave':
+                        $balance_field = ($gender === 'Male') ? 'vacation_leave_male' : 'vacation_leave';
+                        break;
+                    case 'VAWC Leave':
+                        $balance_field = 'vawc_leave';
+                        break;
+                    default:
+                        $balance_field = ''; // Default to an empty field
+                        break;
+                }
+    
+                // Debug: Print the balance field and new balance
+                error_log("Balance Field: " . $balance_field);
+                error_log("Available Balance: " . $available_balance);
+                error_log("Leave Days: " . $leave_days);
+                error_log("New Balance: " . $new_balance);
+    
+                // Update the leave balance and status for paid leave
+                $update_sql = "UPDATE leave_requests lr 
+                               JOIN employee_register e ON lr.employee_id = e.employee_id
+                               JOIN employee_leaves el ON el.employee_id = e.employee_id
+                               SET lr.status = 'Approved', lr.admin_approval = 'Admin Approved', lr.admin_id = ?, el.{$balance_field} = ? 
+                               WHERE lr.leave_id = ?";
+    
+                // Debug: Print the SQL query
+                error_log("SQL Query: " . $update_sql);
+    
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("iii", $adminId, $new_balance, $leave_id);
+    
+                // Execute the update query
+                if ($update_stmt->execute()) {
+                    // Log the activity for approval
+                    $action_type = "Leave Request Approved";
+                    $affected_feature = "Leave Information";
+                    $details = "Leave request from {$row['first_name']} {$row['last_name']} ({$row['employee_id']}) has been approved | Leave day(s): $leave_days.";
+                    log_activity($adminId, $action_type, $affected_feature, $details);
+    
+                    // Notify the employee
+                    $employeeId = $row['employee_id']; // Get the employee's ID
+                    $message = "Your leave request has been approved. Leave days: $leave_days.";
+                    $notificationSql = "INSERT INTO notifications (employee_id, message) VALUES (?, ?)";
+                    $notificationStmt = $conn->prepare($notificationSql);
+                    $notificationStmt->bind_param("ss", $employeeId, $message);
+                    $notificationStmt->execute();
+    
+                    header("Location: ../admin/leave_requests.php?status=approved");
+                } else {
+                    error_log("SQL Error: " . $update_stmt->error);
+                    header("Location: ../admin/leave_requests.php?status=error");
+                }
             }
-
+        } else {
+            // For unpaid leave, only update the status without deducting the balance
             $update_sql = "UPDATE leave_requests lr 
-                           JOIN employee_register e ON lr.employee_id = e.employee_id
-                           JOIN employee_leaves el ON el.employee_id = e.employee_id
-                           SET lr.status = 'Approved', lr.admin_approval = 'Admin Approved', lr.admin_id = ?, el.{$balance_field} = ? 
+                           SET lr.status = 'Approved', lr.admin_approval = 'Admin Approved', lr.admin_id = ? 
                            WHERE lr.leave_id = ?";
-
+    
             $update_stmt = $conn->prepare($update_sql);
-            $update_stmt->bind_param("iii", $adminId, $new_balance, $leave_id);
-
+            $update_stmt->bind_param("ii", $adminId, $leave_id);
+    
+            // Execute the update query
             if ($update_stmt->execute()) {
                 // Log the activity for approval
                 $action_type = "Leave Request Approved";
                 $affected_feature = "Leave Information";
                 $details = "Leave request from {$row['first_name']} {$row['last_name']} ({$row['employee_id']}) has been approved | Leave day(s): $leave_days.";
                 log_activity($adminId, $action_type, $affected_feature, $details);
-            
+    
                 // Notify the employee
                 $employeeId = $row['employee_id']; // Get the employee's ID
                 $message = "Your leave request has been approved. Leave days: $leave_days.";
@@ -190,10 +237,10 @@ if ($action_result->num_rows > 0) {
                 $notificationStmt = $conn->prepare($notificationSql);
                 $notificationStmt->bind_param("ss", $employeeId, $message);
                 $notificationStmt->execute();
-            
+    
                 header("Location: ../admin/leave_requests.php?status=approved");
             } else {
-                error_log("Error updating leave balance: " . $conn->error);
+                error_log("SQL Error: " . $update_stmt->error);
                 header("Location: ../admin/leave_requests.php?status=error");
             }
         }

@@ -1,7 +1,7 @@
 <?php
 // Start session and check admin login
 session_start();
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
@@ -10,21 +10,21 @@ if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['pos
 include '../../db/db_conn.php';
 
 // Fetch user info
-$employeeId = $_SESSION['e_id'];
-$sql = "SELECT e_id, firstname, middlename, lastname, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE e_id = ?";
+$employeeId = $_SESSION['employee_id'];
+$sql = "SELECT employee_id, first_name, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
 
 function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) {
     // SQL query to fetch the highest average score for each employee
-    $sql = "SELECT e.e_id, e.firstname, e.lastname, e.department, e.pfp, 
+    $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, 
                    AVG(ae.$criterion) AS avg_score
             FROM employee_register e
-            JOIN admin_evaluations ae ON e.e_id = ae.e_id
-            GROUP BY e.e_id
+            JOIN admin_evaluations ae ON e.employee_id = ae.employee_id
+            GROUP BY e.employee_id
             ORDER BY avg_score DESC
             LIMIT 1";  // Select the top employee with the highest average score
 
@@ -62,10 +62,10 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
             echo "</div>";            
             echo "<div class='col-md-8' style='height: 100%; display: flex; flex-direction: column; justify-content: center; padding-left: 20px;'>";
             echo "<div class='card-body' style='height: 100%;'>";
-            echo "<h1 class='card-title' style='font-size: 40px; font-weight: bold; color: #333;'>" . htmlspecialchars($row['firstname'] . ' ' . $row['lastname']) . "</h1>";
+            echo "<h1 class='card-title' style='font-size: 40px; font-weight: bold; color: #333;'>" . htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) . "</h1>";
             echo "<p class='card-text fs-5 text-dark'><strong>Department:</strong> " . htmlspecialchars($row['department']) . "</p>";
             echo "<p class='card-text fs-5 text-dark'><strong>$criterionLabel Score:</strong> " . number_format($row['avg_score'], 2) . "</p>";  // Display average score
-            echo "<p class='card-text fs-5 text-dark'><strong>Employee ID:</strong> " . htmlspecialchars($row['e_id']) . "</p>";
+            echo "<p class='card-text fs-5 text-dark'><strong>Employee ID:</strong> " . htmlspecialchars($row['employee_id']) . "</p>";
             echo "</div>"; // End of card-body
             echo "</div>"; // End of col-md-8
             echo "</div>"; // End of row
@@ -179,7 +179,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                                 <span class="big text-light mb-1">
                                     <?php
                                         if ($employeeInfo) {
-                                        echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']);
+                                        echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']);
                                         } else {
                                         echo "User information not available.";
                                         }

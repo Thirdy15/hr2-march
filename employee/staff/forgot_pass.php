@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     try {
         // Check if the email exists in the admin_register table
-        $sql = "SELECT firstname, lastname FROM admin_register WHERE email = ?";
+        $sql = "SELECT first_name, last_name FROM admin_register WHERE email = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param('s', $email);
         $stmt->execute();
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($result->num_rows > 0) {
             // Fetch the first and last name
             $row = $result->fetch_assoc();
-            $userName = $row['firstname'] . ' ' . $row['lastname'];
+            $userName = $row['first_name'] . ' ' . $row['last_name'];
 
             // Generate the reset token and set expiration time
             date_default_timezone_set('Asia/Manila');

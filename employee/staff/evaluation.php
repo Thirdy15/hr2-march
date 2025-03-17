@@ -5,19 +5,19 @@ session_start();
 include '../../db/db_conn.php'; 
 
 // Redirect to login page if employee is not logged in
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
 
 // Get the employee ID from the session
-$employeeId = $_SESSION['e_id'];
+$employeeId = $_SESSION['employee_id'];
 
 // Fetch employee information
-$sql = "SELECT e_id, firstname, middlename, lastname, birthdate, email, role, position, department, phone_number, address, pfp 
-        FROM employee_register WHERE e_id = ?";
+$sql = "SELECT employee_id, first_name, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp 
+        FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -33,9 +33,9 @@ $sql = "SELECT
             AVG(initiative) AS avg_initiative,
             COUNT(*) AS total_evaluations 
         FROM admin_evaluations 
-        WHERE e_id = ?";
+        WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -118,7 +118,7 @@ $conn->close();
                                 <span class="big text-light mb-1">
                                     <?php
                                         if ($employeeInfo) {
-                                        echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']);
+                                        echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']);
                                         } else {
                                         echo "Admin information not available.";
                                         }
