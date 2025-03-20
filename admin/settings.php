@@ -491,7 +491,7 @@ while ($row = $result->fetch_assoc()) {
                     <!-- Navigation Tabs -->
                     <ul class="nav nav-tabs fade-in" id="settingsTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="leave-tab" data-bs-toggle="tab" data-bs-target="#leave" type="button" role="tab" aria-controls="leave" aria-selected="true">
+                            <button class="nav-link " id="leave-tab" data-bs-toggle="tab" data-bs-target="#leave" type="button" role="tab" aria-controls="leave" aria-selected="true">
                                 <i class="fas fa-calendar-alt me-2"></i>Leave Management
                             </button>
                         </li>
@@ -871,7 +871,7 @@ while ($row = $result->fetch_assoc()) {
                         <div class="tab-pane fade" id="calendar-settings" role="tabpanel" aria-labelledby="calendar-tab">
                             <div class="card">
                                 <div class="card-header">
-                                    <h3><i class="fas fa-calendar-alt me-2"></i>Set Non-Working Days</h3>
+                                    <h3><i class="fas fa-calendar-alt me-2 text-white"></i>Set Non-Working Days</h3>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
@@ -965,7 +965,7 @@ while ($row = $result->fetch_assoc()) {
             <!-- Logout Modal -->
             <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
+                    <div class="modal-content text-white">
                         <div class="modal-header">
                             <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -991,7 +991,7 @@ while ($row = $result->fetch_assoc()) {
                             <h5 class="modal-title" id="successAddModalLabel">Success</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body" id="successAddMessage">
+                        <div class="modal-body text-white" id="successAddMessage">
                             Non-working day added successfully!
                         </div>
                         <div class="modal-footer">
@@ -1009,7 +1009,7 @@ while ($row = $result->fetch_assoc()) {
                             <h5 class="modal-title" id="confirmDeleteLabel">Confirm Deletion</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
+                        <div class="modal-body text-white">
                             Are you sure you want to delete this non-working day?
                         </div>
                         <div class="modal-footer">
@@ -1028,7 +1028,7 @@ while ($row = $result->fetch_assoc()) {
                             <h5 class="modal-title" id="successModalLabel">Success</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body" id="successMessage">
+                        <div class="modal-body text-white" id="successMessage">
                             Non-working day deleted successfully!
                         </div>
                         <div class="modal-footer">
@@ -1065,7 +1065,7 @@ while ($row = $result->fetch_assoc()) {
                             <h5 class="modal-title" id="confirmDeleteQuestionLabel">Confirm Deletion</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
+                        <div class="modal-body text-white">
                             Are you sure you want to delete this question?
                         </div>
                         <div class="modal-footer">

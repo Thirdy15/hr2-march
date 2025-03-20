@@ -5,21 +5,21 @@ session_start();
 // Include database connection
 include '../../db/db_conn.php'; 
 
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Contractual') {
+if (!isset($_SESSION['emploeee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Contractual') {
     header("Location: ../../login.php");
     exit();
 }
 
 
-$employeeId = $_SESSION['e_id'];
-$sql = "SELECT e_id, firstname, middlename, lastname, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE e_id = ?";
+$employeeId = $_SESSION['emploeee_id'];
+$sql = "SELECT emploeee_id, first_name, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE emploeee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
 
-$employeeId = $_SESSION['e_id'];
+$employeeId = $_SESSION['emploeee_id'];
 
 // Fetch the average of the employee's evaluations
 $sql = "SELECT 
@@ -30,10 +30,10 @@ $sql = "SELECT
             AVG(initiative) AS avg_initiative,
             COUNT(*) AS total_evaluations 
         FROM admin_evaluations 
-        WHERE e_id = ?";
+        WHERE emploeee_id = ?";
         
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 

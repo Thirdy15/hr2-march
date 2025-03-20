@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['e_id'])) {
+if (!isset($_SESSION['employee_id'])) {
     header("Location: ../employee/employeelogin.php");
     exit();
 }
@@ -17,7 +17,7 @@ $role = 'employee';
 
 // Fetch employee records where role is 'employee' and department matches the logged-in employee's department
 // Assume you have the values for $role, $department, and $position
-$sql = "SELECT e_id, firstname, lastname, role, position FROM employee_register WHERE role = ? AND department = ? AND position IN ('contractual')";
+$sql = "SELECT emploee_id, first_name, last_name, role, position FROM employee_register WHERE role = ? AND department = ? AND position IN ('contractual')";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param('ss', $role, $department);  // Bind the parameters for role and department (both strings)
 $stmt->execute();
@@ -25,16 +25,16 @@ $result = $stmt->get_result();
 
 
 // Fetch evaluations for this employee
-$employeeId = $_SESSION['e_id'];
+$employeeId = $_SESSION['employee_id'];
 $evaluatedEmployees = [];
-$evalSql = "SELECT e_id FROM admin_evaluations WHERE e_id = ?";
+$evalSql = "SELECT employee_id FROM admin_evaluations WHERE employee_id = ?";
 $evalStmt = $conn->prepare($evalSql);
 $evalStmt->bind_param('i', $employeeId);
 $evalStmt->execute();
 $evalResult = $evalStmt->get_result();
 if ($evalResult->num_rows > 0) {
     while ($row = $evalResult->fetch_assoc()) {
-        $evaluatedEmployees[] = $row['e_id'];
+        $evaluatedEmployees[] = $row['emploee_id'];
     }
 }
 
@@ -62,7 +62,7 @@ $employees = [];
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         // Exclude the logged-in employee from the list
-        if ($row['e_id'] != $employeeId) {
+        if ($row['employee_id'] != $employeeId) {
             $employees[] = $row;
         }
     }
@@ -101,14 +101,14 @@ $conn->close();
                     <?php if (!empty($employees)): ?>
                         <?php foreach ($employees as $employee): ?>
                             <tr>
-                                <td class="text-light"><?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?></td>
+                                <td class="text-light"><?php echo htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']); ?></td>
                                 <td class="text-light"><?php echo htmlspecialchars($employee['position']); ?></td>
                                 <td class="text-light"><?php echo htmlspecialchars($employee['role']); ?></td>
                                 <td>
                                     <button class="btn btn-success" 
-                                        onclick="evaluateEmployee(<?php echo $employee['e_id']; ?>, '<?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>', '<?php echo htmlspecialchars($employee['position']); ?>')"
-                                        <?php echo in_array($employee['e_id'], $evaluatedEmployees) ? 'disabled' : ''; ?>>
-                                        <?php echo in_array($employee['e_id'], $evaluatedEmployees) ? 'Evaluated' : 'Evaluate'; ?>
+                                        onclick="evaluateEmployee(<?php echo $employee['emploee_id']; ?>, '<?php echo htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']); ?>', '<?php echo htmlspecialchars($employee['position']); ?>')"
+                                        <?php echo in_array($employee['emploeee_id'], $evaluatedEmployees) ? 'disabled' : ''; ?>>
+                                        <?php echo in_array($employee['employee_id'], $evaluatedEmployees) ? 'Evaluated' : 'Evaluate'; ?>
                                     </button>
                                 </td>
                             </tr>
@@ -130,7 +130,7 @@ $conn->close();
                     </button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" id="e_id" value="<?php echo $_SESSION['e_id']; ?>">
+                    <input type="hidden" id="emploeee_id" value="<?php echo $_SESSION['emploeee_id']; ?>">
                     <div id="questions"></div>
                 </div>
                 <div class="modal-footer">
@@ -152,8 +152,8 @@ $conn->close();
         // The categories and questions fetched from the PHP script
         const questions = <?php echo json_encode($questions); ?>;
 
-        function evaluateEmployee(e_id, employeeName, employeePosition) {
-            currentEmployeeId = e_id; 
+        function evaluateEmployee(emploeee_id, employeeName, employeePosition) {
+            currentEmployeeId = emploeee_id; 
             currentEmployeeName = employeeName; 
             currentEmployeePosition = employeePosition; 
 
@@ -233,14 +233,14 @@ $conn->close();
 
             console.log('Category Averages:', categoryAverages);
 
-            const employeeId = document.getElementById('e_id').value;
+            const employeeId = document.getElementById('emploeee_id').value;
             const department = 'employeeistration Department';
 
             $.ajax({
                 type: 'POST',
                 url: '../db/submit_evaluation.php',
                 data: {
-                    e_id: currentEmployeeId,
+                    emploeee_id: currentEmployeeId,
                     employeeName: currentEmployeeName,
                     employeePosition: currentEmployeePosition,
                     categoryAverages: categoryAverages,

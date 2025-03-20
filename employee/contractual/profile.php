@@ -2,7 +2,7 @@
 session_start();
 include '../../db/db_conn.php';
 
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Contractual') {
+if (!isset($_SESSION['emploeee_id']) || !isset($_SESSION['role']) || $_SESSION['ole'] !== 'Contractual') {
     header("Location: ../../login.php");
     exit();
 }
@@ -14,9 +14,9 @@ if (isset($_SESSION['update_success'])) {
 }
 
 // Fetch user info
-$employeeId = $_SESSION['e_id'];
+$employeeId = $_SESSION['emploeee_id'];
 $sql = "SELECT 
-    e.e_id, e.firstname, e.middlename, e.lastname, e.birthdate, e.gender, e.email, e.created_at,
+    e.emploeee_id, e.first_name, e.middle_name, e.last_name, e.birthdate, e.gender, e.email, e.created_at,
     e.role, e.position, e.department, e.phone_number, e.address, e.pfp, 
     ua.login_time, 
     -- Fetch the last valid logout time
@@ -29,9 +29,9 @@ $sql = "SELECT
 FROM 
     employee_register e
 LEFT JOIN 
-    user_activity ua ON e.e_id = ua.user_id
+    user_activity ua ON e.emploeee_id = ua.user_id
 WHERE 
-    e.e_id = ? 
+    e.emploeee_id = ? 
 ORDER BY 
     ua.login_time DESC 
 LIMIT 1";
@@ -39,7 +39,7 @@ LIMIT 1";
 
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -111,7 +111,7 @@ $conn->close();
                                                     <div class="modal-dialog modal-dialog-centered"> <!-- Set the modal size using 'modal-lg' for large -->
                                                         <div class="modal-content bg-dark text-light" style="width: 600px; height: 500px;">
                                                             <div class="modal-header">
-                                                                <h5 class="modal-title" id="profilePicModalLabel"><?php echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']); ?></h5>
+                                                                <h5 class="modal-title" id="profilePicModalLabel"><?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middl_ename'] . ' ' . $employeeInfo['last_name']); ?></h5>
                                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                             </div>
                                                             <div class="modal-body">
@@ -152,12 +152,12 @@ $conn->close();
                                                 <div class="mt-3">
                                                     <div class="form-group row">
                                                         <div class="col-sm-4 bg-dark form-floating mb-3">
-                                                            <input class="form-control fw-bold" name="fname" value="<?php echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']); ?>" readonly>
+                                                            <input class="form-control fw-bold" name="fname" value="<?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']); ?>" readonly>
                                                             <label class="fw-bold">Name:</label>
                                                         </div>
 
                                                         <div class="col-sm-4 bg-dark form-floating">
-                                                            <input class="form-control fw-bold" name="id" value="<?php echo htmlspecialchars($employeeInfo['e_id']); ?>" readonly>
+                                                            <input class="form-control fw-bold" name="id" value="<?php echo htmlspecialchars($employeeInfo['emploeee_id']); ?>" readonly>
                                                             <label class="fw-bold">ID No.:</label>
                                                         </div>
 
@@ -197,15 +197,15 @@ $conn->close();
                                                 <form id="infoForm" action="../../employee_db/supervisor/update_profile.php" method="post">
                                                     <div class="row mb-3">
                                                         <div class="col-sm-4 bg-dark form-floating mb-3">
-                                                            <input type="text" class="form-control fw-bold" id="inputfName" name="firstname" value="<?php echo htmlspecialchars($employeeInfo['firstname']); ?>" readonly required>
+                                                            <input type="text" class="form-control fw-bold" id="inputfName" name="firstname" value="<?php echo htmlspecialchars($employeeInfo['first_name']); ?>" readonly required>
                                                             <label for="inputfName" class="fw-bold">First Name:</label>
                                                         </div>
                                                         <div class="col-sm-4 bg-dark form-floating mb-3">
-                                                            <input type="text" class="form-control fw-bold" id="inputmName" name="middlename" value="<?php echo htmlspecialchars($employeeInfo['middlename']); ?>" readonly required>
+                                                            <input type="text" class="form-control fw-bold" id="inputmName" name="middlename" value="<?php echo htmlspecialchars($employeeInfo['middle_name']); ?>" readonly required>
                                                             <label for="inputmName" class="fw-bold">Middle Name:</label>
                                                         </div>
                                                         <div class="col-sm-4 bg-dark form-floating">
-                                                            <input type="text" class="form-control fw-bold" id="inputlName" name="lastname" value="<?php echo htmlspecialchars($employeeInfo['lastname']); ?>" readonly required>
+                                                            <input type="text" class="form-control fw-bold" id="inputlName" name="lastname" value="<?php echo htmlspecialchars($employeeInfo['last_name']); ?>" readonly required>
                                                             <label for="inputlName" class="fw-bold">Last Name:</label>
                                                         </div>
                                                     </div>
@@ -329,7 +329,7 @@ $conn->close();
                                 </div>
                                 <div class="modal-footer border-top border-secondary">
                                     <form action="../../employee_db/supervisor/delete_employee_pfp.php" method="post">
-                                        <input type="hidden" name="employeeId" value="<?php echo $employeeInfo['e_id']; ?>">
+                                        <input type="hidden" name="employeeId" value="<?php echo $employeeInfo['emploeee_id']; ?>">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                         <button type="submit" class="btn btn-danger">Delete</button>
                                     </form>

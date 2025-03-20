@@ -4,13 +4,13 @@ include '../../db/db_conn.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Ensure user is logged in
-    if (!isset($_SESSION['e_id'])) {
+    if (!isset($_SESSION['employee_id'])) {
         $_SESSION['status_message'] = "User not logged in.";
         header("Location: ../../login.php");
         exit();
     }
 
-    $employeeId = $_SESSION['e_id'];
+    $employeeId = $_SESSION['employee_id'];
     $startDate = $_POST['start_date'];
     $endDate = $_POST['end_date'];
     $leaveType = $_POST['leave_type'];
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     INNER JOIN employee_register ON employee_leaves.employee_id = employee_register.e_id 
     WHERE employee_id = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $employeeId);
+    $stmt->bind_param('s', $employeeId);
     $stmt->execute();
     $result = $stmt->get_result();
 
@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // Insert the leave request into the database, including the proof file paths
-    $sql = "INSERT INTO leave_requests (e_id, start_date, end_date, leave_type, proof, status) 
+    $sql = "INSERT INTO leave_requests (employee_id, start_date, end_date, leave_type, proof, status) 
             VALUES (?, ?, ?, ?, ?, 'Pending')";
     $stmt = $conn->prepare($sql);
 
@@ -226,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $proofFilePaths = implode(',', $proofFiles);  // Store only the file names (relative to 'proof' folder)
 
     // Bind parameters
-    $stmt->bind_param('issss', $employeeId, $startDate, $endDate, $leaveType, $proofFilePaths);
+    $stmt->bind_param('sssss', $employeeId, $startDate, $endDate, $leaveType, $proofFilePaths);
 
     // Execute the query
     if ($stmt->execute()) {

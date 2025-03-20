@@ -2,7 +2,7 @@
 <?php
 // Start session and check admin login
 session_start();
-if (!isset($_SESSION['e_id'])) {
+if (!isset($_SESSION['employee_id'])) {
     header("Location: ../../employee/login.php");
     exit();
 }
@@ -11,10 +11,10 @@ if (!isset($_SESSION['e_id'])) {
 include '../../db/db_conn.php';
 
 // Fetch user info
-$employeeId = $_SESSION['e_id'];
-$sql = "SELECT e_id, firstname, middlename, lastname, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE e_id = ?";
+$employeeId = $_SESSION['employee_id'];
+$sql = "SELECT employee_id, first_name, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE e_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
@@ -32,7 +32,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
     }
 
     // SQL query to fetch the highest average score for each employee
-    $sql = "SELECT e.e_id, e.firstname, e.lastname, e.department, e.pfp, e.email, 
+    $sql = "SELECT e.employee_id, e.firstname, e.lastname, e.department, e.pfp, e.email, 
                    AVG(ae.$criterion) AS avg_score,
                    AVG(ae.quality) AS avg_quality,
                    AVG(ae.communication_skills) AS avg_communication,
@@ -40,8 +40,8 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                    AVG(ae.punctuality) AS avg_punctuality,
                    AVG(ae.initiative) AS avg_initiative
             FROM employee_register e
-            JOIN admin_evaluations ae ON e.e_id = ae.e_id
-            GROUP BY e.e_id
+            JOIN admin_evaluations ae ON e.employee_id = ae.employee_id
+            GROUP BY e.employee_id
             ORDER BY avg_score DESC
             LIMIT 1";
 
@@ -123,11 +123,11 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
             echo "</div>";
             
             echo "<div class='profile-info'>";
-            echo "<h2 class='employee-name'>" . htmlspecialchars($row['firstname'] . ' ' . $row['lastname']) . "</h2>";
+            echo "<h2 class='employee-name'>" . htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) . "</h2>";
             echo "<p class='department-name'>" . htmlspecialchars($row['department']) . "</p>";
             echo "</div>";
             echo "<div class='employee-id fade-in' style='animation-delay: 0.8s;'>";
-            echo "Employee ID: " . htmlspecialchars($row['e_id']);
+            echo "Employee ID: " . htmlspecialchars($row['employee_id']);
             echo "</div>";
 
             // New metric box below employee ID
@@ -161,7 +161,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
 
             // Add buttons for comments and reactions
             echo "<div class='comment-reaction-buttons'>";
-            echo "  <button class='btn btn-primary' onclick='openCommentModal(" . $row['e_id'] . ")'>Write a Comment</button>";
+            echo "  <button class='btn btn-primary' onclick='openCommentModal(" . $row['emploee_id'] . ")'>Write a Comment</button>";
             echo "  <div class='comment-input-container'>";
             echo "      <button class='btn btn-primary react-btn' onclick='showReactions(this)'>React</button>";
             echo "      <div id='reaction-menu' class='reaction-dropdown'>";

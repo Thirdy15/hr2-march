@@ -106,13 +106,198 @@ $conn->close();
     <link href="../../css/calendar.css" rel="stylesheet"/>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --dark-bg: #1a1a1a;
+            --darker-bg: #141414;
+            --card-bg: #242424;
+            --input-bg: #2d2d2d;
+            --border-color: #3d3d3d;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --primary-color: #4f6df5;
+            --primary-hover: #3a58e0;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .sb-nav-fixed {
+            background-color: var(--dark-bg) !important;
+        }
+        
+        #layoutSidenav_content {
+            background-color: var(--dark-bg);
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px;
+        }
+        
+        .text-light {
+            color: var(--text-color) !important;
+        }
+        
+        .text-muted-foreground {
+            color: var(--text-muted) !important;
+        }
+        
+        .form-control, .form-select {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: var(--input-bg);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(79, 109, 245, 0.25);
+            color: var(--text-color);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .text-success {
+            color: var(--success-color) !important;
+        }
+        
+        .text-danger {
+            color: var(--danger-color) !important;
+        }
+        
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        
+        .modal-header, .modal-footer {
+            border-color: var(--border-color);
+        }
+        
+        .alert-danger {
+            background-color: rgba(231, 76, 60, 0.2);
+            border-color: rgba(231, 76, 60, 0.3);
+            color: #f5b7b1;
+        }
+        
+        /* Custom styling for leave info cards */
+        .leave-balance-card {
+            background: linear-gradient(145deg, #242424, #2a2a2a);
+        }
+        
+        .leave-info-section {
+            background: linear-gradient(145deg, #2a2a2a, #303030);
+            border-radius: 10px;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .leave-info-section:hover {
+            transform: translateY(-5px);
+        }
+        
+        /* Improved form styling */
+        .form-floating-label {
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background-color: var(--card-bg);
+            padding: 0 5px;
+            font-size: 0.85rem;
+            z-index: 1;
+        }
+        
+        /* Custom file input styling */
+        input[type="file"] {
+            padding: 10px;
+        }
+        
+        input[type="file"]::file-selector-button {
+            background-color: #3d3d3d;
+            color: var(--text-color);
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            margin-right: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="file"]::file-selector-button:hover {
+            background-color: #4d4d4d;
+        }
+        
+        /* Button styling */
+        .btn {
+            border-radius: 6px;
+            font-weight: 500;
+            padding: 8px 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        /* Calendar container styling */
+        #calendarContainer {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+    </style>
 </head>
-<body class="sb-nav-fixed bg-black">
+<body class="sb-nav-fixed">
     <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
-            <main class="container-fluid position-relative bg-black px-4">
+            <main class="container-fluid position-relative px-4">
                 <div class="container" id="calendarContainer" 
                     style="position: fixed; top: 9%; right: 0; z-index: 1050; 
                     width: 700px; display: none;">
@@ -122,12 +307,12 @@ $conn->close();
                         </div>
                     </div>
                 </div> 
-                <h1 class="mb-2 text-light">File Leave</h1>                   
-                <div class="card bg-black py-4">
+                <h1 class="mb-4 mt-4 text-light">File Leave</h1>                   
+                <div class="py-4">
                     <?php if (isset($_SESSION['status_message'])): ?>
                         <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content bg-dark text-light">
+                                <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="statusModalLabel">
                                             <i class="fa fa-info-circle text-light me-2 fs-4"></i> Message
@@ -153,22 +338,26 @@ $conn->close();
                     <?php endif; ?>
                     <div class="row mb-4">
                         <div class="col-md-12">
-                            <div class="card leave-balance-card bg-dark text-light">
-                                <div class="card-body text-center">
-                                    <h3 class="card-title">Leave Information</h3>
+                            <div class="card leave-balance-card">
+                                <div class="card-body text-center p-4">
+                                    <h3 class="card-title mb-4 text-light">Leave Information</h3>
                                     <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="p-3">
-                                                <h5>Available Paid Leave</h5>
-                                                <p class="fs-4 text-success"><?php echo htmlspecialchars($remainingLeaves); ?> days</p>
-                                                <a class="btn btn-success" href="../../employee/supervisor/leaveDetails.php"> View leave details</a>
+                                        <div class="col-md-6 mb-3 mb-md-0">
+                                            <div class="leave-info-section">
+                                                <h5 class="text-light mb-3">Available Paid Leave</h5>
+                                                <p class="fs-2 fw-bold text-success mb-3"><?php echo htmlspecialchars($remainingLeaves); ?> days</p>
+                                                <a class="btn btn-success w-100 btn-icon" href="../../employee/supervisor/leaveDetails.php">
+                                                    <i class="fas fa-info-circle"></i> View leave details
+                                                </a>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <div class="p-3">
-                                                <h5>Used Leave</h5>
-                                                <p class="fs-4 text-danger"><?php echo htmlspecialchars($usedLeave); ?> days</p>
-                                                <a class="btn btn-danger" href="../../employee/supervisor/leaveHistory.php"> View leave history</a>
+                                            <div class="leave-info-section">
+                                                <h5 class="text-light mb-3">Used Leave</h5>
+                                                <p class="fs-2 fw-bold text-danger mb-3"><?php echo htmlspecialchars($usedLeave); ?> days</p>
+                                                <a class="btn btn-danger w-100 btn-icon" href="../../employee/supervisor/leaveHistory.php">
+                                                    <i class="fas fa-history"></i> View leave history
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -179,42 +368,42 @@ $conn->close();
                     <?php
                         if (isset($_GET['error']) && $_GET['error'] === 'proof_required') {
                             $leave_type = isset($_GET['leave_type']) ? htmlspecialchars($_GET['leave_type']) : 'this leave type';
-                            echo '<div class="alert alert-danger mb-3">Proof is required for ' . $leave_type . '.</div>';
+                            echo '<div class="alert alert-danger mb-4"><i class="fas fa-exclamation-triangle me-2"></i> Proof is required for ' . $leave_type . '.</div>';
                         }
                     ?>
                     <form id="leave-request-form" action="../../employee_db/supervisor/leave_conn.php" class="needs-validation" method="POST" enctype="multipart/form-data" novalidate>
                         <div class="row">
                             <div class="col-md-12">
-                                <div class="card leave-form text bg-dark text-light">
-                                    <div class="card-header text-center border-bottom border-secondary">
-                                        <h3 class="mb-0">Request Leave</h3>
+                                <div class="card leave-form text">
+                                    <div class="card-header text-center border-bottom">
+                                        <h3 class="mb-0 text-light">Request Leave</h3>
                                     </div>
-                                    <div class="card-body mt-4">
-                                        <div class="row mb-3">
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="name" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Name:</label>
-                                                    <input type="text" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="name" name="name" value="<?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['last_name']); ?>" readonly>
+                                    <div class="card-body p-4">
+                                        <div class="row mb-4">
+                                            <div class="col-md-6 mb-3 mb-md-0">
+                                                <div class="position-relative">
+                                                    <label for="name" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Name:</label>
+                                                    <input type="text" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" id="name" name="name" value="<?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['last_name']); ?>" readonly>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="department" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Department:</label>
-                                                    <input type="text" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="department" name="department" value="<?php echo htmlspecialchars($employeeInfo['department']); ?>" readonly>
+                                            <div class="col-md-6">
+                                                <div class="position-relative">
+                                                    <label for="department" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Department:</label>
+                                                    <input type="text" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" id="department" name="department" value="<?php echo htmlspecialchars($employeeInfo['department']); ?>" readonly>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;" for="leave_type">Leave Type</label>
-                                                    <select id="leave_type" name="leave_type" class="form-control form-select fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" required>
+                                        <div class="row mb-4">
+                                            <div class="col-md-6 mb-3 mb-md-0">
+                                                <div class="position-relative">
+                                                    <label class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;" for="leave_type">Leave Type</label>
+                                                    <select id="leave_type" name="leave_type" class="form-select fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" required>
                                                         <option value="" disabled selected>Select leave type</option>
                                                         <option value="Bereavement Leave">Bereavement Leave</option>
                                                         <option value="Emergency Leave">Emergency Leave</option>
@@ -230,13 +419,13 @@ $conn->close();
                                                     <div class="invalid-feedback">Please select leave type.</div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="leave_category" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Leave Category
+                                            <div class="col-md-6">
+                                                <div class="position-relative">
+                                                    <label for="leave_category" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Leave Category
                                                     </label>
-                                                    <select class="form-control form-select fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="leave_category" name="leave_category" required>
+                                                    <select class="form-select fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" id="leave_category" name="leave_category" required>
                                                         <option value="" disabled selected>Select leave category</option>
                                                         <option value="Paid Leave">Paid Leave</option>
                                                         <option value="Unpaid Leave">Unpaid Leave</option>
@@ -245,54 +434,52 @@ $conn->close();
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-4 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="start_date" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Start Date
+                                        <div class="row mb-4">
+                                            <div class="col-md-4 mb-3 mb-md-0">
+                                                <div class="position-relative">
+                                                    <label for="start_date" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Start Date
                                                     </label>
-                                                    <input type="date" id="start_date" name="start_date" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" required>
+                                                    <input type="date" id="start_date" name="start_date" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" required>
                                                     <div class="invalid-feedback">Please set a date.</div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-4 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="end_date" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">End Date</label>
-                                                    <input type="date" id="end_date" name="end_date" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" required>
+                                            <div class="col-md-4 mb-3 mb-md-0">
+                                                <div class="position-relative">
+                                                    <label for="end_date" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">End Date</label>
+                                                    <input type="date" id="end_date" name="end_date" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" required>
                                                     <div class="invalid-feedback">Please set a date.</div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-4 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="leave_days" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Number of Days</label>
-                                                    <input type="number" name="leave_days" id="leave_days" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" min="1" max="30" placeholder="" required readonly>
+                                            <div class="col-md-4">
+                                                <div class="position-relative">
+                                                    <label for="leave_days" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Number of Days</label>
+                                                    <input type="number" name="leave_days" id="leave_days" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" min="1" max="30" placeholder="" required readonly>
                                                     <div class="invalid-feedback">Please set a value.</div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="mb-3" id="proof-container">
-                                            <?php
-                                            if (isset($_GET['error']) && $_GET['error'] === 'proof_required') {
-                                                $leave_type = isset($_GET['leave_type']) ? htmlspecialchars($_GET['leave_type']) : 'this leave type';
-                                                echo '<div class="alert alert-danger mb-3">Proof is required for ' . $leave_type . '.</div>';
-                                            }
-                                            ?>
-                                            <div class="position-relative mb-3 mb-md-0">
-                                                <label for="proof" class="fw-bold position-absolute text-light" 
-                                                    style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Attach Proof</label>
-                                                <input type="file" id="proof" name="proof[]" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                    style="height: 60px; padding-top: 15px; padding-bottom: 15px;" accept="*/*" multiple>
+                                        <div class="mb-4" id="proof-container">
+                                            <div class="position-relative">
+                                                <label for="proof" class="form-floating-label text-light" 
+                                                    style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Attach Proof</label>
+                                                <input type="file" id="proof" name="proof[]" class="form-control fw-bold" 
+                                                    style="height: 60px; padding-top: 20px;" accept="*/*" multiple>
                                                 <div class="invalid-feedback">Proof is required with the selected leave type.</div>
                                             </div>
                                         </div>
-                                        <div class="d-flex justify-content-end">
-                                            <button type="button" class="btn btn-danger me-2" onclick="resetForm()">Clear</button>
-                                            <button type="submit" class="btn btn-primary">Submit Leave Request</button>
+                                        <div class="d-flex justify-content-end gap-3 mt-4">
+                                            <button type="button" class="btn btn-danger btn-icon" onclick="resetForm()">
+                                                <i class="fas fa-times"></i> Clear
+                                            </button>
+                                            <button type="submit" class="btn btn-primary btn-icon">
+                                                <i class="fas fa-paper-plane"></i> Submit Leave Request
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -303,7 +490,7 @@ $conn->close();
             </main>
                 <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content bg-dark text-light">
+                        <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -312,7 +499,7 @@ $conn->close();
                                 Are you sure you want to log out?
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn border-secondary text-light" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                 <form action="../../employee/logout.php" method="POST">
                                     <button type="submit" class="btn btn-danger">Logout</button>
                                 </form>

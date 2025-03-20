@@ -1,13 +1,13 @@
 <?php
 session_start();
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Contractual') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Contractual') {
     header("Location: ../../login.php");
     exit();
 }
 
 include '../../db/db_conn.php';
 
-$employeeId = $_SESSION['e_id'];
+$employeeId = $_SESSION['employee_id'];
 $employeePosition = $_SESSION['position'];
 // Fetch the average of the employee's evaluations
 $sql = "SELECT 
@@ -18,10 +18,10 @@ $sql = "SELECT
             AVG(initiative) AS avg_initiative,
             COUNT(*) AS total_evaluations 
         FROM admin_evaluations 
-        WHERE e_id = ?";
+        WHERE emploee_id = ?";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -43,9 +43,9 @@ if ($result->num_rows > 0) {
 }
 
 // Fetch user info
-$sql = "SELECT firstname, middlename, lastname, email, role, position, pfp FROM employee_register WHERE e_id = ?";
+$sql = "SELECT first_name, middle_name, last_name, email, role, position, pfp FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
@@ -637,7 +637,7 @@ function renderCalendar(month, year, attendanceRecords = {}) {
 // Fetch attendance for the given month and year
 async function fetchAttendance(month, year) {
     try {
-        const response = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?e_id=${employeeId}&month=${month + 1}&year=${year}`);
+        const response = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?emploee_id=${employeeId}&month=${month + 1}&year=${year}`);
         const data = await response.json();
 
         if (data.error) {
@@ -665,7 +665,7 @@ async function showAttendanceDetails(day) {
     // Check if the selected day is a Sunday
     const isSunday = selectedDateObj.getDay() === 0; // Sunday is 0 in JavaScript's getDay()
 
-    const leaveResponse = await fetch(`/HR2/employee_db/supervisor/fetch_leave.php?e_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
+    const leaveResponse = await fetch(`/HR2/employee_db/supervisor/fetch_leave.php?emploee_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
     const leaveData = await leaveResponse.json();
 
     if (leaveData.onLeave) {
@@ -677,7 +677,7 @@ async function showAttendanceDetails(day) {
         statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
         statusElement.classList.add('text-danger');
     } else {
-        const attendanceResponse = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?e_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
+        const attendanceResponse = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?employee_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
         const data = await attendanceResponse.json();
 
         if (data.error) {
