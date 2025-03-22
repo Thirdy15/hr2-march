@@ -77,10 +77,7 @@ $conn->close();
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-        }
+        
 
         .card-header {
             border-bottom: 1px solid var(--border-color);
@@ -97,12 +94,7 @@ $conn->close();
             transition: all 0.3s;
         }
 
-        .btn-primary:hover {
-            background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
+        
 
         .form-control {
             background-color: rgba(30, 30, 30, 0.8);
@@ -139,10 +131,7 @@ $conn->close();
             transition: all 0.3s;
         }
 
-        .profile-picture:hover {
-            transform: scale(1.05);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-        }
+        
 
         .initials-avatar {
             width: 230px;
@@ -187,11 +176,7 @@ $conn->close();
             color: var(--text-primary);
         }
 
-        .dropdown-item:hover {
-            background-color: rgba(67, 97, 238, 0.1);
-            color: var(--primary-color);
-        }
-
+    
         .form-label-group {
             position: relative;
             margin-bottom: 1.5rem;

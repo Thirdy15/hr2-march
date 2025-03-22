@@ -1,8 +1,8 @@
 <?php
 session_start();
-include '../../db/db_conn.php'; // Include your database connection
+include '../db/db_conn.php'; // Include your database connection
 
-if (!isset($_SESSION['e_id']) && !isset($_SESSION['a_id'])) {
+if (!isset($_SESSION['a_id'])) {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized access']);
     exit();
 }
@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Fetch comments from the database
     $sql = "SELECT comment, username, created_at FROM employee_comments WHERE employee_id = ? ORDER BY created_at DESC";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $employeeId);
+    $stmt->bind_param("s", $employeeId);
     $stmt->execute();
     $result = $stmt->get_result();
     $comments = [];
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Fetch the total number of comments
     $countSql = "SELECT COUNT(*) AS total_comments FROM employee_comments WHERE employee_id = ?";
     $countStmt = $conn->prepare($countSql);
-    $countStmt->bind_param("i", $employeeId);
+    $countStmt->bind_param("s", $employeeId);
     $countStmt->execute();
     $countResult = $countStmt->get_result();
     $countRow = $countResult->fetch_assoc();

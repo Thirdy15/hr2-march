@@ -1107,7 +1107,7 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
             <div class="modal fade" id="approveConfirmationModal" tabindex="-1" aria-labelledby="approveConfirmationModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content bg-dark">
-                        <div class="modal-header border-bottom border-secondary">
+                        <div class="modal-header border-bottom border-secondary text">
                             <h5 class="modal-title" id="approveConfirmationModalLabel">
                                 <i class="fas fa-check-circle text-success me-2"></i>Confirm Approval
                             </h5>

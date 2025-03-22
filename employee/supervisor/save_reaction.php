@@ -2,7 +2,7 @@
 session_start();
 include '../../db/db_conn.php'; // Include your database connection
 
-if (!isset($_SESSION['emploee_id']) && !isset($_SESSION['a_id'])) {
+if (!isset($_SESSION['e_id']) && !isset($_SESSION['a_id'])) {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized access']);
     exit();
 }
@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     $employeeId = $data['employee_id'];
     $reaction = $data['reaction'];
-    $accountId = isset($_SESSION['emploee_id']) ? $_SESSION['eployee_id'] : $_SESSION['a_id'];
+    $accountId = isset($_SESSION['e_id']) ? $_SESSION['e_id'] : $_SESSION['a_id'];
 
     // Validate input
     if (empty($employeeId) || empty($reaction)) {
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if a reaction already exists for this account
     $checkSql = "SELECT * FROM employee_reactions WHERE employee_id = ? AND account_id = ?";
     $checkStmt = $conn->prepare($checkSql);
-    $checkStmt->bind_param("ss", $employeeId, $accountId);
+    $checkStmt->bind_param("ii", $employeeId, $accountId);
     $checkStmt->execute();
     $checkResult = $checkStmt->get_result();
 

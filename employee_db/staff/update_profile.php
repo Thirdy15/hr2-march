@@ -4,11 +4,11 @@ session_start();
 include '../db/db_conn.php';
 
 // Fetch user ID from session
-$employeeId = $_SESSION['e_id'];
+$employeeId = $_SESSION['employee_id'];
 
 // Prepare and bind
-$stmt = $conn->prepare("UPDATE employee_register SET firstname = ?, middlename = ?, lastname = ?, birthdate = ?, email = ?, phone_number = ?, address = ? WHERE e_id = ?");
-$stmt->bind_param("sssssssi", $firstname, $middlename, $lastname, $birthdate, $email, $phone_number, $address, $employeeId);
+$stmt = $conn->prepare("UPDATE employee_register SET firstname = ?, middlename = ?, lastname = ?, birthdate = ?, email = ?, phone_number = ?, address = ? WHERE employee_id = ?");
+$stmt->bind_param("ssssssss", $firstname, $middlename, $lastname, $birthdate, $email, $phone_number, $address, $employeeId);
 
 // Get form data
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -29,8 +29,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Move the uploaded file
         if (move_uploaded_file($profilePicture['tmp_name'], $targetFile)) {
             // Prepare to update the profile picture path in the database
-            $stmtPic = $conn->prepare("UPDATE employee_register SET pfp = ? WHERE e_id = ?");
-            $stmtPic->bind_param("si", $targetFile, $userId);
+            $stmtPic = $conn->prepare("UPDATE employee_register SET pfp = ? WHERE employee_id = ?");
+            $stmtPic->bind_param("ss", $targetFile, $userId);
             $stmtPic->execute();
             $stmtPic->close();
         } else {

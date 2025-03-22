@@ -1,5 +1,4 @@
 <?php
-    
 session_start();
 if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Supervisor') {
     header("Location: ../../login.php");
@@ -10,19 +9,26 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['
 include '../../db/db_conn.php';
 
 $employeeId = $_SESSION['employee_id'];
-$employeePosition = $_SESSION['position'];
+$employeePosition = $_SESSION['role'];
 
 // Fetch notifications for the employee
 $notificationQuery = "SELECT * FROM notifications WHERE employee_id = ? ORDER BY created_at DESC";
 $notificationStmt = $conn->prepare($notificationQuery);
-$notificationStmt->bind_param("s", $employeeId);
+if ($notificationStmt === false) {
+    die("Error preparing notification query: " . $conn->error);
+}
+$notificationStmt->bind_param("i", $employeeId);
 $notificationStmt->execute();
 $notifications = $notificationStmt->get_result();
+
 // Fetch employee info
 $employeeId = $_SESSION['employee_id'];
 $sql = "SELECT employee_id, first_name, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $employeeId);
+if ($stmt === false) {
+    die("Error preparing employee info query: " . $conn->error);
+}
+$stmt->bind_param("i", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
@@ -48,12 +54,15 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                    AVG(ae.punctuality) AS avg_punctuality,
                    AVG(ae.initiative) AS avg_initiative
             FROM employee_register e
-            JOIN admin_evaluations ae ON e.employee_id = ae.employee_id
+            JOIN evaluations ae ON e.employee_id = ae.employee_id
             GROUP BY e.employee_id
             ORDER BY avg_score DESC
             LIMIT 5"; // Fetch top 5 employees
 
     $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        die("Error preparing top employees query: " . $conn->error);
+    }
     $stmt->execute();
     $result = $stmt->get_result();
 
@@ -147,8 +156,8 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                             </div>
                         </div>
                         <div class='profile-info'>
-                            <h2 class='employee-name'><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></h2>
-                            <p class='department-name'><?php echo htmlspecialchars($row['department']); ?></p>
+                                <h2 class='employee-name'><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></h2>
+                                <p class='department-name'><?php echo htmlspecialchars($row['department']); ?></p>
                         </div>
                         <div class='employee-id fade-in' style='animation-delay: 0.8s;'>
                             Employee ID: <?php echo htmlspecialchars($row['employee_id']); ?>
@@ -190,8 +199,8 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                                 <div id='reaction-menu-<?php echo $row['employee_id']; ?>' class='reaction-dropdown'>
                                     <button onclick='selectReaction("👍 Like", <?php echo $row['employee_id']; ?>)'>👍</button>
                                     <button onclick='selectReaction("❤️ Heart", <?php echo $row['employee_id']; ?>)'>❤️</button>
-                                    <button onclick='selectReaction("😎 Awesome", <?php echo $row['eemploee_id']; ?>)'>😎</button>
-                                    <button onclick='selectReaction("😮 Wow", <?php echo $row['emploee_id']; ?>)'>😮</button>
+                                    <button onclick='selectReaction("😎 Awesome", <?php echo $row['employee_id']; ?>)'>😎</button>
+                                    <button onclick='selectReaction("😮 Wow", <?php echo $row['employee_id']; ?>)'>😮</button>
                                 </div>
                             </div>
                         </div>
@@ -263,18 +272,21 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
 }
 
 function getAllEmployees($conn) {
-    $sql = "SELECT e.emploee_id, e.first_name, e.last_name, e.department, e.pfp, e.email,
+    $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, e.email,
                    AVG(ae.quality) AS avg_quality,
                    AVG(ae.communication_skills) AS avg_communication,
                    AVG(ae.teamwork) AS avg_teamwork,
                    AVG(ae.punctuality) AS avg_punctuality,
                    AVG(ae.initiative) AS avg_initiative
             FROM employee_register e
-            JOIN admin_evaluations ae ON e.empploee_id = ae.employee_id
+            JOIN evaluations ae ON e.employee_id = ae.employee_id
             GROUP BY e.employee_id
-            ORDER BY e.emploee_id ASC"; // Fetch all employees
+            ORDER BY e.employee_id ASC"; // Fetch all employees
 
     $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        die("Error preparing all employees query: " . $conn->error);
+    }
     $stmt->execute();
     $result = $stmt->get_result();
 
@@ -368,7 +380,7 @@ function getAllEmployees($conn) {
                             </div>
                         </div>
                         <div class='profile-info'>
-                            <h2 class='employee-name'><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></h2>
+                            <h2 class='employee-name'><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['lastname']); ?></h2>
                             <p class='department-name'><?php echo htmlspecialchars($row['department']); ?></p>
                         </div>
                         <div class='employee-id fade-in' style='animation-delay: 0.8s;'>
@@ -470,7 +482,10 @@ function getAllEmployees($conn) {
 function getComments($conn, $employeeId) {
     $sql = "SELECT comment, comment_time FROM comments WHERE employee_id = ? ORDER BY comment_time DESC";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $employeeId);
+    if ($stmt === false) {
+        die("Error preparing comments query: " . $conn->error);
+    }
+    $stmt->bind_param("i", $employeeId);
     $stmt->execute();
     $result = $stmt->get_result();
     $comments = [];
@@ -491,7 +506,7 @@ function getComments($conn, $employeeId) {
     <title>Outstanding Employees</title>
     <link href="../../css/styles.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-    
+
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
     <link href="../../css/calendar.css" rel="stylesheet"/>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
@@ -808,7 +823,6 @@ function getComments($conn, $employeeId) {
     transform: scale(1.2);
 }
 
-
         /* Modern Comment Modal Styling */
         .modal-right {
             position: fixed;
@@ -894,6 +908,32 @@ function getComments($conn, $employeeId) {
 
         .comment-input::placeholder {
             color: rgba(255, 255, 255, 0.5);
+        }
+
+        .comment-input-container .comment-post-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #0d6efd;
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .comment-input-container .comment-post-btn:hover {
+            background-color: #0b5ed7;
+        }
+
+        .comment-input-container .comment-post-btn i {
+            font-size: 16px;
         }
 
         .comment-input-container .comment-post-btn {
@@ -1039,15 +1079,14 @@ function getComments($conn, $employeeId) {
         <?php include 'sidebar.php'; ?>
     <div id="layoutSidenav_content">
         <main class="container-fluid position-relative bg-black">
-            <div class="container" id="calendarContainer"
-            style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1050;
-                            width: 80%; height: 80%; display: none;">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div id="calendar" class="p-2"></div>
-                    </div>
-                </div>
-            </div>
+            <div class="container text-light">
+                <!-- Top Employees for Different Criteria -->
+                <?php getTopEmployeesByCriterion($conn, 'quality', 'Quality of Work', 1); ?>
+                <?php getTopEmployeesByCriterion($conn, 'communication_skills', 'Communication Skills', 2); ?>
+                <?php getTopEmployeesByCriterion($conn, 'teamwork', 'Teamwork', 3); ?>
+                <?php getTopEmployeesByCriterion($conn, 'punctuality', 'Punctuality', 4); ?>
+                <?php getTopEmployeesByCriterion($conn, 'initiative', 'Initiative', 5); ?>
+                <?php getAllEmployees($conn); ?>
 
         </main>
             <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
@@ -1087,7 +1126,6 @@ function getComments($conn, $employeeId) {
                 </div>
            </div>
 
-    
     <!-- Modal for displaying comments -->
 <div id="commentModal" class="modal-right">
     <div class="modal-header">
@@ -1106,7 +1144,6 @@ function getComments($conn, $employeeId) {
         </div>
     </div>
 </div>
-
 
     <!-- Reaction Modal -->
     <div id="reactionModal" class="modal">
@@ -1229,9 +1266,6 @@ function getComments($conn, $employeeId) {
 
             // Append the progress circle
             svg.appendChild(progressCircle);
-
-            // Add the SVG to the document (e.g., append it to the body or a specific element)
-            document.body.appendChild(svg);
 
             const circleElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             circleElement.setAttribute('class', 'progress-ring__circle');
@@ -1550,7 +1584,6 @@ function addNotificationToDropdown(notification) {
             .catch(error => console.error('Error:', error));
         }
     }
-
 
     function showNextEmployee(categoryIndex) {
         const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;

@@ -4,12 +4,12 @@ include '../db/db_conn.php';
 
 // Directly retrieve the admin ID from the session
 session_start(); // Make sure the session is started
-$employeeId = $_SESSION['e_id']; // Assuming admin_id is stored in session
+$employeeId = $_SESSION['employee_id']; // Assuming admin_id is stored in session
 
 // Delete the profile picture by setting it to NULL
 $query = "UPDATE employee_register SET pfp = NULL WHERE e_id = ?";
 $stmt = $conn->prepare($query);
-$stmt->bind_param('i', $employeeId); // Use 'i' for integer
+$stmt->bind_param('s', $employeeId); // Use 'i' for integer
 
 if ($stmt->execute()) {
     // Redirect back to the profile page after deletion

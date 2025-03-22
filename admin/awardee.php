@@ -31,7 +31,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
     }
 
     // SQL query to fetch the highest average score for each employee
-    $sql = "SELECT e.employee_id, e.firstname, e.lastname, e.department, e.pfp, e.email,
+    $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, e.email,
                    AVG(ae.$criterion) AS avg_score,
                    AVG(ae.quality) AS avg_quality,
                    AVG(ae.communication_skills) AS avg_communication,
@@ -39,7 +39,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                    AVG(ae.punctuality) AS avg_punctuality,
                    AVG(ae.initiative) AS avg_initiative
             FROM employee_register e
-            JOIN admin_evaluations ae ON e.employee_id = ae.employee_id
+            JOIN evaluations ae ON e.employee_id = ae.employee_id
             GROUP BY e.employee_id
             ORDER BY avg_score DESC
             LIMIT 5"; // Fetch top 5 employees
@@ -138,7 +138,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                             </div>
                         </div>
                         <div class='profile-info'>
-                            <h2 class='employee-name'><?php echo htmlspecialchars($row['firstname'] . ' ' . $row['lastname']); ?></h2>
+                            <h2 class='employee-name'><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></h2>
                             <p class='department-name'><?php echo htmlspecialchars($row['department']); ?></p>
                         </div>
                         <div class='employee-id fade-in' style='animation-delay: 0.8s;'>
@@ -175,7 +175,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                                 <i class="bi bi-chat-dots-fill me-1"></i> Comments (<span id="comment-count-<?php echo $row['employee_id']; ?>">0</span>)
                             </button>
                             <div class='comment-input-container'>
-                                <button class="btn btn-primary react-btn" id="react-button-<?php echo $row['e_id']; ?>">
+                                <button class="btn btn-primary react-btn" id="react-button-<?php echo $row['employee_id']; ?>">
                                     <i class="bi bi-emoji-smile-fill me-1"></i> React (<span id="reaction-count-<?php echo $row['employee_id']; ?>">0</span>)
                                 </button>
                                 <div id='reaction-menu-<?php echo $row['employee_id']; ?>' class='reaction-dropdown'>
@@ -254,14 +254,14 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
 }
 
 function getAllEmployees($conn) {
-    $sql = "SELECT e.employee_id, e.firstname, e.lastname, e.department, e.pfp, e.email,
+    $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, e.email,
                    AVG(ae.quality) AS avg_quality,
                    AVG(ae.communication_skills) AS avg_communication,
                    AVG(ae.teamwork) AS avg_teamwork,
                    AVG(ae.punctuality) AS avg_punctuality,
                    AVG(ae.initiative) AS avg_initiative
             FROM employee_register e
-            JOIN admin_evaluations ae ON e.employee_id = ae.employee_id
+            JOIN evaluations ae ON e.employee_id = ae.employee_id
             GROUP BY e.employee_id
             ORDER BY e.employee_id ASC"; // Fetch all employees
 
@@ -1068,6 +1068,10 @@ function getComments($conn, $employeeId) {
                     </div>
                 </div>
             </div>
+            <div class='navigation-buttons'>
+                            <button class='btn btn-primary' onclick='showPreviousEmployee(1)'>Previous</button>
+                            <button class='btn btn-primary' onclick='showNextEmployee(1)'>Next</button>
+                        </div>
         <?php include 'footer.php'; ?>
     </div>
     <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">

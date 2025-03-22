@@ -1,8 +1,8 @@
 <?php
 session_start();
-include '../../db/db_conn.php'; // Include your database connection
+include '../db/db_conn.php'; // Include your database connection
 
-if (!isset($_SESSION['employee_id']) && !isset($_SESSION['a_id'])) {
+if (!isset($_SESSION['a_id'])) {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized access']);
     exit();
 }
@@ -17,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // Fetch unique reaction count from the database
-    $sql = "SELECT COUNT(DISTINCT account_id) AS count FROM employee_reactions WHERE employee_id = ?";
+    // Fetch reaction count from the database
+    $sql = "SELECT COUNT(*) AS count FROM employee_reactions WHERE employee_id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $employeeId);
     $stmt->execute();

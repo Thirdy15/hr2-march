@@ -8,7 +8,7 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['
     exit();
 }
 // Get the logged-in employee's ID from the session
-$employee_id = $_SESSION['employee_id'];
+$employee_id = $_SESSION['e_employee_idid'];
 
 // Fetch the employee's details from the database
 $sql = "SELECT employee_id, first_name, last_name, role, department, available_leaves FROM employee_register WHERE employee_id = ?";

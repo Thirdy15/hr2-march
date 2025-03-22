@@ -50,10 +50,10 @@ if (!$leavesInfo) {
 // Fetch the used leave by summing up approved leave days
 $usedLeaveQuery = "SELECT start_date, end_date, SUM(DATEDIFF(end_date, start_date) + 1) AS used_leaves 
                    FROM leave_requests 
-                   WHERE employee_id = ? AND status = 'approved'
+                   WHERE employee_id = ? AND status = 'pending'
                    GROUP BY employee_id";
 $usedLeaveStmt = $conn->prepare($usedLeaveQuery);
-$usedLeaveStmt->bind_param("s", $employeeId);
+$usedLeaveStmt->bind_param("i", $employeeId);
 $usedLeaveStmt->execute();
 $usedLeaveResult = $usedLeaveStmt->get_result();
 $usedLeaveRow = $usedLeaveResult->fetch_assoc();
@@ -106,132 +106,194 @@ $conn->close();
     <link href="../../css/calendar.css" rel="stylesheet"/>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --dark-bg: #1a1a1a;
+            --darker-bg: #141414;
+            --card-bg: #242424;
+            --input-bg: #2d2d2d;
+            --border-color: #3d3d3d;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --primary-color: #4f6df5;
+            --primary-hover: #3a58e0;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .sb-nav-fixed {
+            background-color: var(--dark-bg) !important;
+        }
+        
+        #layoutSidenav_content {
+            background-color: var(--dark-bg);
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px;
+        }
+        
+        .text-light {
+            color: var(--text-color) !important;
+        }
+        
+        .text-muted-foreground {
+            color: var(--text-muted) !important;
+        }
+        
+        .form-control, .form-select {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: var(--input-bg);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(79, 109, 245, 0.25);
+            color: var(--text-color);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .text-success {
+            color: var(--success-color) !important;
+        }
+        
+        .text-danger {
+            color: var(--danger-color) !important;
+        }
+        
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        
+        .modal-header, .modal-footer {
+            border-color: var(--border-color);
+        }
+        
+        .alert-danger {
+            background-color: rgba(231, 76, 60, 0.2);
+            border-color: rgba(231, 76, 60, 0.3);
+            color: #f5b7b1;
+        }
+        
+        /* Custom styling for leave info cards */
+        .leave-balance-card {
+            background: linear-gradient(145deg, #242424, #2a2a2a);
+        }
+        
+        .leave-info-section {
+            background: linear-gradient(145deg, #2a2a2a, #303030);
+            border-radius: 10px;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .leave-info-section:hover {
+            transform: translateY(-5px);
+        }
+        
+        /* Improved form styling */
+        .form-floating-label {
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background-color: var(--card-bg);
+            padding: 0 5px;
+            font-size: 0.85rem;
+            z-index: 1;
+        }
+        
+        /* Custom file input styling */
+        input[type="file"] {
+            padding: 10px;
+        }
+        
+        input[type="file"]::file-selector-button {
+            background-color: #3d3d3d;
+            color: var(--text-color);
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            margin-right: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="file"]::file-selector-button:hover {
+            background-color: #4d4d4d;
+        }
+        
+        /* Button styling */
+        .btn {
+            border-radius: 6px;
+            font-weight: 500;
+            padding: 8px 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        /* Calendar container styling */
+        #calendarContainer {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+    </style>
 </head>
-<body class="sb-nav-fixed bg-black">
-    <nav class="sb-topnav navbar navbar-expand navbar-dark border-bottom border-1 border-warning bg-dark">
-        <a class="navbar-brand ps-3 text-muted" href="../../employee/staff/dashboard.php">Employee Portal</a>
-        <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" href="#!"><i class="fas fa-bars text-light"></i></button>
-        <div class="d-flex ms-auto me-0 me-md-3 my-2 my-md-0 align-items-center">
-            <div class="text-light me-3 p-2 rounded shadow-sm bg-gradient" id="currentTimeContainer" 
-                style="background: linear-gradient(45deg, #333333, #444444); border-radius: 5px;">
-                <span class="d-flex align-items-center">
-                    <span class="pe-2">
-                        <i class="fas fa-clock"></i> 
-                        <span id="currentTime">00:00:00</span>
-                    </span>
-                    <button class="btn btn-outline-warning btn-sm ms-2" type="button" onclick="toggleCalendar()">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span id="currentDate">00/00/0000</span>
-                    </button>
-                </span>
-            </div>
-            <form class="d-none d-md-inline-block form-inline">
-                <div class="input-group">
-                    <input class="form-control" type="text" placeholder="Search for..." aria-label="Search for..." aria-describedby="btnNavbarSearch" />
-                    <button class="btn btn-warning" id="btnNavbarSearch" type="button"><i class="fas fa-search"></i></button>
-                </div>
-            </form>
-        </div>
-    </nav>
-    <div id="layoutSidenav">
-        <div id="layoutSidenav_nav">
-            <nav class="sb-sidenav accordion bg-dark" id="sidenavAccordion">
-                <div class="sb-sidenav-menu ">
-                    <div class="nav">
-                        <div class="sb-sidenav-menu-heading text-center text-muted">Your Profile</div>
-                        <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
-                            <li class="nav-item dropdown text">
-                                <a class="nav-link dropdown-toggle text-light d-flex justify-content-center ms-4" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <img src="<?php echo (!empty($employeeInfo['pfp']) && $employeeInfo['pfp'] !== 'defaultpfp.png') 
-                                        ? htmlspecialchars($employeeInfo['pfp']) 
-                                        : '../../img/defaultpfp.jpg'; ?>" 
-                                        class="rounded-circle border border-light" width="120" height="120" alt="" />
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <li><a class="dropdown-item" href="../../employee/staff/profile.php">Profile</a></li>
-                                    <li><a class="dropdown-item" href="#!">Settings</a></li>
-                                    <li><a class="dropdown-item" href="#!">Activity Log</a></li>
-                                    <li><hr class="dropdown-divider" /></li>
-                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">Logout</a></li>
-                                </ul>
-                            </li>
-                            <li class="nav-item text-light d-flex ms-3 flex-column align-items-center text-center">
-                                <span class="big text-light mb-1">
-                                    <?php
-                                        if ($employeeInfo) {
-                                        echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']);
-                                        } else {
-                                        echo "User information not available.";
-                                        }
-                                    ?>
-                                </span>      
-                                <span class="big text-light">
-                                    <?php
-                                        if ($employeeInfo) {
-                                        echo htmlspecialchars($employeeInfo['role']);
-                                        } else {
-                                        echo "User information not available.";
-                                        }
-                                    ?>
-                                </span>
-                            </li>
-                        </ul>
-                        <div class="sb-sidenav-menu-heading text-center text-muted border-top border-1 border-warning mt-3">Employee Dashboard</div>
-                        <a class="nav-link text-light" href="../../employee/staff/dashboard.php">
-                            <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
-                            Dashboard
-                        </a>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseTAD" aria-expanded="false" aria-controls="collapseTAD">
-                            <div class="sb-nav-link-icon"><i class="fa fa-address-card"></i></div>
-                            Time and Attendance
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseTAD" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light" href="../../employee/staff/attendance.php">Attendance</a>
-                                <a class="nav-link text-light" href="">Timesheet</a>
-                            </nav>
-                        </div>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseLM" aria-expanded="false" aria-controls="collapseLM">
-                            <div class="sb-nav-link-icon"><i class="fas fa-calendar-times"></i></div>
-                            Leave Management
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseLM" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                            <a class="nav-link text-light" href="../../employee/staff/leave_file.php">File Leave</a>
-                            <a class="nav-link text-light" href="../../employee/staff/leave_request.php">Leave Request</a>
-                            </nav>
-                        </div>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePM" aria-expanded="false" aria-controls="collapsePM">
-                            <div class="sb-nav-link-icon"><i class="fas fa-line-chart"></i></div>
-                            Performance Management
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapsePM" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                            <a class="nav-link text-light" href="../../employee/staff/evaluation.php">Evaluation</a>
-                            </nav>
-                        </div>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseSR" aria-expanded="false" aria-controls="collapseSR">
-                            <div class="sb-nav-link-icon"><i class="fa fa-address-card"></i></div>
-                            Social Recognition
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseSR" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light" href="">Awardee</a>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-                <div class="sb-sidenav-footer bg-black text-light border-top border-1 border-warning">
-                    <div class="small">Logged in as: <?php echo htmlspecialchars($employeeInfo['role']); ?></div>
-                </div>
-            </nav>
-        </div>
-        <div id="layoutSidenav_content">
-            <main class="container-fluid position-relative bg-black px-4">
+<body class="sb-nav-fixed">
+            <main class="container-fluid position-relative px-4">
                 <div class="container" id="calendarContainer" 
                     style="position: fixed; top: 9%; right: 0; z-index: 1050; 
                     width: 700px; display: none;">
@@ -241,12 +303,12 @@ $conn->close();
                         </div>
                     </div>
                 </div> 
-                <h1 class="mb-2 text-light">File Leave</h1>                   
-                <div class="card bg-black py-4">
+                <h1 class="mb-4 mt-4 text-light">File Leave</h1>                   
+                <div class="py-4">
                     <?php if (isset($_SESSION['status_message'])): ?>
                         <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content bg-dark text-light">
+                                <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="statusModalLabel">
                                             <i class="fa fa-info-circle text-light me-2 fs-4"></i> Message
@@ -272,22 +334,26 @@ $conn->close();
                     <?php endif; ?>
                     <div class="row mb-4">
                         <div class="col-md-12">
-                            <div class="card leave-balance-card bg-dark text-light">
-                                <div class="card-body text-center">
-                                    <h3 class="card-title">Leave Information</h3>
+                            <div class="card leave-balance-card">
+                                <div class="card-body text-center p-4">
+                                    <h3 class="card-title mb-4 text-light">Leave Information</h3>
                                     <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="p-3">
-                                                <h5>Overall Available Leave</h5>
-                                                <p class="fs-4 text-success"><?php echo htmlspecialchars($remainingLeaves); ?> days</p>
-                                                <a class="btn btn-success" href="../../employee/staff/leaveDetails.php"> View leave details</a>
+                                        <div class="col-md-6 mb-3 mb-md-0">
+                                            <div class="leave-info-section">
+                                                <h5 class="text-light mb-3">Available Paid Leave</h5>
+                                                <p class="fs-2 fw-bold text-success mb-3"><?php echo htmlspecialchars($remainingLeaves); ?> days</p>
+                                                <a class="btn btn-success w-100 btn-icon" href="../../employee/staff/leaveDetails.php">
+                                                    <i class="fas fa-info-circle"></i> View leave details
+                                                </a>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <div class="p-3">
-                                                <h5>Used Leave</h5>
-                                                <p class="fs-4 text-danger"><?php echo htmlspecialchars($usedLeave); ?> days</p>
-                                                <a class="btn btn-danger" href="../../employee/staff/leaveHistory.php"> View leave history</a>
+                                            <div class="leave-info-section">
+                                                <h5 class="text-light mb-3">Used Leave</h5>
+                                                <p class="fs-2 fw-bold text-danger mb-3"><?php echo htmlspecialchars($usedLeave); ?> days</p>
+                                                <a class="btn btn-danger w-100 btn-icon" href="../../employee/staff/leaveHistory.php">
+                                                    <i class="fas fa-history"></i> View leave history
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -295,37 +361,45 @@ $conn->close();
                             </div>
                         </div>
                     </div>
-                    <form id="leave-request-form" action="../../employee_db/staff/leave_conn.php"class="needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                    <?php
+                        if (isset($_GET['error']) && $_GET['error'] === 'proof_required') {
+                            $leave_type = isset($_GET['leave_type']) ? htmlspecialchars($_GET['leave_type']) : 'this leave type';
+                            echo '<div class="alert alert-danger mb-4"><i class="fas fa-exclamation-triangle me-2"></i> Proof is required for ' . $leave_type . '.</div>';
+                        }
+                    ?>
+                    <form id="leave-request-form" action="../../employee_db/staff/leave_conn.php" class="needs-validation" method="POST" enctype="multipart/form-data" novalidate>
                         <div class="row">
                             <div class="col-md-12">
-                                <div class="card leave-form text bg-dark text-light">
-                                    <div class="card-body">
-                                        <h3 class="card-title text-center mb-4">Request Leave</h3>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="name" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Name:</label>
-                                                    <input type="text" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="name" name="name" value="<?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['last_name']); ?>" readonly>
+                                <div class="card leave-form text">
+                                    <div class="card-header text-center border-bottom">
+                                        <h3 class="mb-0 text-light">Request Leave</h3>
+                                    </div>
+                                    <div class="card-body p-4">
+                                        <div class="row mb-4">
+                                            <div class="col-md-6 mb-3 mb-md-0">
+                                                <div class="position-relative">
+                                                    <label for="name" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Name:</label>
+                                                    <input type="text" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" id="name" name="name" value="<?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['last_name']); ?>" readonly>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="department" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Department:</label>
-                                                    <input type="text" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="department" name="department" value="<?php echo htmlspecialchars($employeeInfo['department']); ?>" readonly>
+                                            <div class="col-md-6">
+                                                <div class="position-relative">
+                                                    <label for="department" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Department:</label>
+                                                    <input type="text" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" id="department" name="department" value="<?php echo htmlspecialchars($employeeInfo['department']); ?>" readonly>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;" for="leave_type">Leave Type</label>
-                                                    <select id="leave_type" name="leave_type" class="form-control form-select fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" required>
+                                        <div class="row mb-4">
+                                            <div class="col-md-6 mb-3 mb-md-0">
+                                                <div class="position-relative">
+                                                    <label class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;" for="leave_type">Leave Type</label>
+                                                    <select id="leave_type" name="leave_type" class="form-select fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" required>
                                                         <option value="" disabled selected>Select leave type</option>
                                                         <option value="Bereavement Leave">Bereavement Leave</option>
                                                         <option value="Emergency Leave">Emergency Leave</option>
@@ -341,49 +415,67 @@ $conn->close();
                                                     <div class="invalid-feedback">Please select leave type.</div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="leave_days" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Number of Days</label>
-                                                    <input type="number" name="leave_days" id="leave_days" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" min="1" max="30" placeholder="" required readonly>
+                                            <div class="col-md-6">
+                                                <div class="position-relative">
+                                                    <label for="leave_category" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Leave Category
+                                                    </label>
+                                                    <select class="form-select fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" id="leave_category" name="leave_category" required>
+                                                        <option value="" disabled selected>Select leave category</option>
+                                                        <option value="Paid Leave">Paid Leave</option>
+                                                        <option value="Unpaid Leave">Unpaid Leave</option>
+                                                    </select>
+                                                    <div class="invalid-feedback">Please select a category.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-4">
+                                            <div class="col-md-4 mb-3 mb-md-0">
+                                                <div class="position-relative">
+                                                    <label for="start_date" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Start Date
+                                                    </label>
+                                                    <input type="date" id="start_date" name="start_date" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" required>
+                                                    <div class="invalid-feedback">Please set a date.</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 mb-3 mb-md-0">
+                                                <div class="position-relative">
+                                                    <label for="end_date" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">End Date</label>
+                                                    <input type="date" id="end_date" name="end_date" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" required>
+                                                    <div class="invalid-feedback">Please set a date.</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="position-relative">
+                                                    <label for="leave_days" class="form-floating-label text-light" 
+                                                        style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Number of Days</label>
+                                                    <input type="number" name="leave_days" id="leave_days" class="form-control fw-bold" 
+                                                        style="height: 60px; padding-top: 20px;" min="1" max="30" placeholder="" required readonly>
                                                     <div class="invalid-feedback">Please set a value.</div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="start_date" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Start Date</label>
-                                                    <input type="date" id="start_date" name="start_date" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" required>
-                                                    <div class="invalid-feedback">Please set a date.</div>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <div class="position-relative mb-3 mb-md-0">
-                                                    <label for="end_date" class="fw-bold position-absolute text-light" 
-                                                        style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">End Date</label>
-                                                    <input type="date" id="end_date" name="end_date" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                        style="height: 60px; padding-top: 15px; padding-bottom: 15px;" required>
-                                                    <div class="invalid-feedback">Please set a date.</div>
-                                                </div>
+                                        <div class="mb-4" id="proof-container">
+                                            <div class="position-relative">
+                                                <label for="proof" class="form-floating-label text-light" 
+                                                    style="top: -10px; left: 15px; background-color: #242424; padding: 0 5px;">Attach Proof</label>
+                                                <input type="file" id="proof" name="proof[]" class="form-control fw-bold" 
+                                                    style="height: 60px; padding-top: 20px;" accept="*/*" multiple>
+                                                <div class="invalid-feedback">Proof is required with the selected leave type.</div>
                                             </div>
                                         </div>
-                                        <div class="mb-3">
-                                            <div class="position-relative mb-3 mb-md-0">
-                                                <label for="proof" class="fw-bold position-absolute text-light" 
-                                                    style="top: -10px; left: 15px; background-color: #212529; padding: 0 5px;">Attach Proof</label>
-                                                <input type="file" id="proof" name="proof[]" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
-                                                    style="height: 60px; padding-top: 15px; padding-bottom: 15px;" accept="*/*" multiple>
-                                                <small class="form-text text-warning">Note: Please upload the necessary proof (image or PDF) to support your leave request. You may upload multiple files,
-                                                but a single file is sufficient for your request to be considered valid.</small>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex justify-content-end">
-                                            <button type="button" class="btn btn-danger me-2" onclick="resetForm()">Clear</button>
-                                            <button type="submit" class="btn btn-primary">Submit Leave Request</button>
+                                        <div class="d-flex justify-content-end gap-3 mt-4">
+                                            <button type="button" class="btn btn-danger btn-icon" onclick="resetForm()">
+                                                <i class="fas fa-times"></i> Clear
+                                            </button>
+                                            <button type="submit" class="btn btn-primary btn-icon">
+                                                <i class="fas fa-paper-plane"></i> Submit Leave Request
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -394,7 +486,7 @@ $conn->close();
             </main>
                 <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content bg-dark text-light">
+                        <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -403,7 +495,7 @@ $conn->close();
                                 Are you sure you want to log out?
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn border-secondary text-light" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                 <form action="../../employee/logout.php" method="POST">
                                     <button type="submit" class="btn btn-danger">Logout</button>
                                 </form>
@@ -411,95 +503,10 @@ $conn->close();
                         </div>
                     </div>
                 </div>  
-            <footer class="py-4 bg-dark text-light mt-auto border-top border-warning">
-                <div class="container-fluid px-4">
-                    <div class="d-flex align-items-center justify-content-between small">
-                        <div class="text-muted">Copyright &copy; Your Website 2024</div>
-                        <div>
-                            <a href="#">Privacy Policy</a>
-                            &middot;
-                            <a href="#">Terms & Conditions</a>
-                        </div>
-                    </div>
-                </div>
-            </footer>
+            <?php include 'footer.php'; ?>
         </div>
     </div>
     <script>
-        //CALENDAR 
-        let calendar;
-            function toggleCalendar() {
-                const calendarContainer = document.getElementById('calendarContainer');
-                    if (calendarContainer.style.display === 'none' || calendarContainer.style.display === '') {
-                        calendarContainer.style.display = 'block';
-                        if (!calendar) {
-                            initializeCalendar();
-                         }
-                        } else {
-                            calendarContainer.style.display = 'none';
-                        }
-            }
-
-            function initializeCalendar() {
-                const calendarEl = document.getElementById('calendar');
-                    calendar = new FullCalendar.Calendar(calendarEl, {
-                        initialView: 'dayGridMonth',
-                        headerToolbar: {
-                        left: 'prev,next today',
-                        center: 'title',
-                        right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                        },
-                        height: 440,  
-                        events: {
-                        url: '../../db/holiday.php',  
-                        method: 'GET',
-                        failure: function() {
-                        alert('There was an error fetching events!');
-                        }
-                        }
-                    });
-
-                    calendar.render();
-            }
-
-            document.addEventListener('DOMContentLoaded', function () {
-                const currentDateElement = document.getElementById('currentDate');
-                const currentDate = new Date().toLocaleDateString(); 
-                currentDateElement.textContent = currentDate; 
-            });
-
-            document.addEventListener('click', function(event) {
-                const calendarContainer = document.getElementById('calendarContainer');
-                const calendarButton = document.querySelector('button[onclick="toggleCalendar()"]');
-
-                    if (!calendarContainer.contains(event.target) && !calendarButton.contains(event.target)) {
-                        calendarContainer.style.display = 'none';
-                        }
-            });
-        //CALENDAR END
-
-        //TIME 
-        function setCurrentTime() {
-            const currentTimeElement = document.getElementById('currentTime');
-            const currentDateElement = document.getElementById('currentDate');
-
-            const currentDate = new Date();
-    
-            currentDate.setHours(currentDate.getHours() + 0);
-                const hours = currentDate.getHours();
-                const minutes = currentDate.getMinutes();
-                const seconds = currentDate.getSeconds();
-                const formattedHours = hours < 10 ? '0' + hours : hours;
-                const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-                const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
-
-            currentTimeElement.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-            currentDateElement.textContent = currentDate.toLocaleDateString();
-        }
-        setCurrentTime();
-        setInterval(setCurrentTime, 1000);
-        //TIME END
-
         //LEAVE DAYS
         document.getElementById('start_date').addEventListener('change', calculateLeaveDays);
         document.getElementById('end_date').addEventListener('change', calculateLeaveDays);
@@ -640,9 +647,32 @@ $conn->close();
         })();
         //VALIDATION
 
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const leaveTypeDropdown = document.getElementById('leave_type');
+            const proofInput = document.getElementById('proof');
+
+            // Function to check if proof is required
+            function checkProofRequirement() {
+                const selectedLeaveType = leaveTypeDropdown.value;
+                const proofRequiredLeaveTypes = ['Sick Leave', 'Maternity Leave', 'Paternity Leave'];
+
+                if (proofRequiredLeaveTypes.includes(selectedLeaveType)) {
+                    proofInput.setAttribute('required', true); // Make proof required
+                } else {
+                    proofInput.removeAttribute('required'); // Remove the required attribute
+                }
+            }
+
+            // Add event listener to the leave type dropdown
+            leaveTypeDropdown.addEventListener('change', checkProofRequirement);
+
+            // Check proof requirement on page load
+            checkProofRequirement();
+        });
 </script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../js/employee.js"></script>
 </body>
 </html>

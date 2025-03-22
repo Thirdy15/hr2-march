@@ -63,7 +63,7 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="" />
+    <meta name="description" content="Supervisor Dashboard for HR Management System" />
     <meta name="author" content="" />
     <title>Employee Dashboard | HR2</title>
     <link href="../../css/styles.css" rel="stylesheet" />
@@ -72,112 +72,283 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
     <link href="../../css/calendar.css" rel="stylesheet"/>
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet'/>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Base styles for the calendar */
-        #ATTENDANCEcalendar .col {
-            padding: 5px; /* Add padding to calendar cells */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #1abc9c;
+            --accent-color: #3498db;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --success-color: #2ecc71;
+            --bg-dark: rgba(33, 37, 41) !important; 
+            --bg-black: rgba(16, 17, 18) !important; 
+            --card-bg: rgba(33, 37, 41) !important; 
+            --text-light: #ecf0f1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --default-day-color: #6c757d; /* Default color for days with no status */
         }
-
+        
+        body {
+            background:  rgba(16, 17, 18) !important; 
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .sb-nav-fixed {
+            background:  rgba(16, 17, 18) !important; 
+        }
+        
+        #layoutSidenav_content {
+            background: rgba(16, 17, 18) !important; 
+        }
+        
+        .card {
+            background: rgba(33, 37, 41) !important; 
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card-header {
+            background:  rgba(33, 37, 41) !important; 
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+        
+        .card-header i {
+            color: var(--accent-color); /* Fixed icon color */
+            margin-right: 10px;
+        }
+        
+        .card-header a {
+            text-decoration: none;
+            color: var(--text-light);
+            transition: color 0.2s;
+        }
+        
+        .card-header a:hover {
+            color: var(--accent-color); /* Fixed hover color */
+        }
+        
+        .btn-primary {
+            background: #3498db !important; /* Fixed button color */
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9 !important; /* Fixed hover color */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-danger {
+            background: #e74c3c !important; /* Fixed danger button color */
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.2) !important; /* Fixed progress background */
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            border-radius: 4px;
+        }
+        
+        .list-group-item {
+            background: rgba(33, 37, 41, 0.7) !important; /* Fixed list item background */
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem;
+            transition: background 0.2s;
+        }
+        
+        .list-group-item:hover {
+            background: rgba(33, 37, 41, 0.9) !important; /* Fixed hover background */
+        }
+        
+        .rounded-circle {
+            border: 3px solid var(--secondary-color);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-content {
+            background: rgba(33, 37, 41) !important; /* Fixed modal background */
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .modal-header, .modal-footer {
+            border-color: var(--border-color);
+        }
+        
+        .btn-close-white {
+            filter: brightness(0) invert(1);
+        }
+        
+        /* Calendar Styles */
+        #ATTENDANCEcalendar .col {
+            padding: 5px;
+        }
+        
+        #ATTENDANCEcalendar .btn {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            background-color: rgba(33, 37, 41, 0.5); /* Default background for all days */
+        }
+        
+        #ATTENDANCEcalendar .btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(26, 188, 156, 0.5);
+            background-color: rgba(33, 37, 41, 0.8); /* Darker on hover */
+        }
+        
+        .text-success {
+            color: var(--success-color) !important;
+        }
+        
+        .text-warning {
+            color: var(--warning-color) !important;
+        }
+        
+        .text-danger {
+            color: var(--danger-color) !important;
+        }
+        
+        .text-info {
+            color: var(--accent-color) !important;
+        }
+        
+        .text-default {
+            color: var(--default-day-color) !important; /* Default color for days with no status */
+        }
+        
+        /* Badge styles */
+        .badgeT {
+            padding: 3px;
+            font-weight: 600;
+            border-radius: 30px;
+        }
+        
+        /* Form controls */
+        .form-control {
+            background: rgba(33, 37, 41, 0.5) !important; /* Fixed form control background */
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+        
+        .form-control:focus {
+            background: rgba(33, 37, 41, 0.7) !important; /* Fixed focus background */
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.25rem rgba(26, 188, 156, 0.25);
+            color: var(--text-light);
+        }
+        
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            padding: 1rem;
+        }
+        
         /* Responsive adjustments */
         @media (max-width: 767.98px) {
-            /* Adjust font size for smaller screens */
             #ATTENDANCEcalendar .btn span {
-                font-size: 0.9rem; /* Smaller font size for mobile */
+                font-size: 0.9rem;
             }
-
-            /* Reduce padding for smaller screens */
+            
             #ATTENDANCEcalendar .col {
                 padding: 2px;
             }
-
-            /* Make buttons smaller on mobile */
+            
             #ATTENDANCEcalendar .btn {
-                height: 30px !important; /* Adjust button height for mobile */
+                height: 35px !important;
+                width: 35px !important;
+            }
+            
+            .chart-container {
+                height: 300px;
             }
         }
-
+        
         @media (max-width: 575.98px) {
-            /* Further adjustments for very small screens */
             #ATTENDANCEcalendar .btn span {
-                font-size: 0.8rem; /* Even smaller font size */
+                font-size: 0.8rem;
             }
-
+            
             #ATTENDANCEcalendar .col {
                 padding: 1px;
             }
-        }
-
-        /* Base styles for the days of the week */
-            .row.text-center.fw-bold .col {
-                padding: 5px; /* Add padding to each day */
-                font-size: 1rem; /* Default font size */
+            
+            #ATTENDANCEcalendar .btn {
+                height: 30px !important;
+                width: 30px !important;
             }
-
-            /* Responsive adjustments */
-            @media (max-width: 767.98px) {
-                /* Adjust font size for smaller screens */
-                .row.text-center.fw-bold .col {
-                    font-size: 0.9rem; /* Smaller font size for mobile */
-                    padding: 3px; /* Reduce padding for smaller screens */
-                }
-            }
-
-            @media (max-width: 575.98px) {
-                /* Further adjustments for very small screens */
-                .row.text-center.fw-bold .col {
-                    font-size: 0.8rem; /* Even smaller font size */
-                    padding: 2px; /* Further reduce padding */
-                }
-            }
-
-            /* Base styles for the chart container */
+            
             .chart-container {
-                position: relative;
-                height: 400px; /* Default height for desktop */
-                width: 100%;
+                height: 250px;
             }
-
-            /* Responsive adjustments */
-            @media (max-width: 767.98px) {
-                /* Adjust height for tablets */
-                .chart-container {
-                    height: 300px;
-                }
-
-                /* Reduce font size for point labels */
-                #performanceRadarChart {
-                    font-size: 12px;
-                }
+            
+            .row.text-center.fw-bold .col {
+                font-size: 0.8rem;
+                padding: 2px;
             }
-
-            @media (max-width: 575.98px) {
-                /* Adjust height for mobile */
-                .chart-container {
-                    height: 250px;
-                }
-
-                /* Further reduce font size for point labels */
-                #performanceRadarChart {
-                    font-size: 10px;
-                }
-            }
+        }
+        
+        /* Animation effects */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .card {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        .card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .card:nth-child(3) {
+            animation-delay: 0.4s;
+        }
     </style>
 </head>
 
-<body class="sb-nav-fixed bg-black">
+<body class="sb-nav-fixed">
     <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
             <main>
-                <div class="container-fluid position-relative px-4">
-                    <div class="">
-                        <div class="row align-items-center">
-                            <div class="col">
-                                <h1 class="mb-4 text-light">Dashboard</h1>
-                            </div>
-                        </div>
-                    </div>
+                <div class="container-fluid px-4 py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 class="mb-0 text-light fw-bold">
+                            <i class="fas fa-tachometer-alt me-2 text-info"></i>Dashboard
+                        </h1>
+                    </div>   
+
                     <div class="container-fluid" id="calendarContainer" 
                         style="position: fixed; top: 7%; right: 40; z-index: 1050; 
                         max-width: 100%; display: none;">
@@ -187,32 +358,43 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                             </div>
                         </div>
                     </div> 
-                    <div class="row mb-2">
-                        <div class="col-md-6 mt-2 mb-2">
-                            <div class="card bg-dark text-light" style="height: 500px;">
-                                <div class="card-header text-light border-bottom border-1 border-secondary">
-                                    <i class="fas fa-calendar-check me-1"></i> 
-                                    <a class="text-light" href="../../employee/supervisor/timesheet.php#timesheet">Attendance </a>
-                                </div>
-                                <div class="card-body overflow-auto" style="max-height: 400px;">
-                                    <div class="d-flex justify-content-between align-items-start mb-0">
-                                        <div>
-                                            <h5 class="fw-bold d-inline">Today's Date: <a href="../../employee/supervisor/dashboard.php" 
-                                            id="todaysDate" class="cursor-pointer text-decoration-none"><span id="todaysDateContent">Feb 21, 2025</span></a></h5>
-                                        </div>
-                                        <div>
-                                            <h5 class="fw-bold">Time in:</h5>
-                                            <p class="text-light">08:11 AM</p>
-                                        </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-calendar-check me-1 text-info"></i> 
+                                        <a class="text-light" href="../../employee/supervisor/timesheet.php#timesheet">Attendance</a>
                                     </div>
+                                            
+                                    <div class="bg-dark rounded-pill px-3 py-1">
+                                        <span class="text-info">Time in: </span>
+                                        <span class="text-light">08:11 AM</span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-dark rounded-pill px-3 py-2 d-flex align-items-center me-3">
+                                    <i class="fas fa-calendar-day me-2 text-info"></i>
+                                <span id="todaysDateContent" class="text-light">Mar 21, 2025</span>
+                            </div>
+                        </div>
+                                
+                                <div class="card-body overflow-auto" style="max-height: 400px;">
                                     <div class="mb-3">
                                         <label for="dateFilter" class="form-label">Filter by Date:</label>
-                                        <input type="date" class="form-control" id="dateFilter">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-transparent text-light border-secondary">
+                                                <i class="fas fa-calendar"></i>
+                                            </span>
+                                            <input type="date" class="form-control" id="dateFilter">
+                                        </div>
                                     </div>
-                                    <hr>
+                                    <hr class="border-secondary">
                                     <div class="mb-0">
-                                        <h3 class="mb-0" id="monthYearDisplay"></h3>
-                                        <div class="row text-center fw-bold">
+                                        <h3 class="mb-3 text-center fw-bold" id="monthYearDisplay"></h3>
+                                        <div class="row text-center fw-bold bg-dark bg-opacity-50 rounded-3 py-2 mb-2">
                                             <div class="col p-1">Sun</div>
                                             <div class="col p-1">Mon</div>
                                             <div class="col p-1">Tue</div>
@@ -223,79 +405,127 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                         </div>
 
                                         <!-- Calendar rows with attendance status -->
-                                        <div id="ATTENDANCEcalendar" class="pt-3 text-light bg-black rounded"></div>
+                                        <div id="ATTENDANCEcalendar" class="pt-3 text-light rounded"></div>
                                     </div>
                                 </div>
                                 <div class="card-footer text-center d-flex justify-content-around">
-                                    <button class="btn btn-primary d-flex align-items-center px-4 py-2 rounded-3" id="prevMonthBtn">
-                                        <i class="bi bi-chevron-left"></i> Prev
+                                    <button class="btn btn-primary d-flex align-items-center px-4 py-2 rounded-pill" id="prevMonthBtn">
+                                        <i class="fas fa-chevron-left me-2"></i> Previous
                                     </button>
-                                    <button class="btn btn-primary d-flex align-items-center px-4 py-2 rounded-3" id="nextMonthBtn">
-                                        Next <i class="bi bi-chevron-right"></i>
+                                    <button class="btn btn-primary d-flex align-items-center px-4 py-2 rounded-pill" id="nextMonthBtn">
+                                        Next <i class="fas fa-chevron-right ms-2"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6 mt-2 mb-2">
-                            <div class="card bg-dark">
-                                <div class="card-header text-light border-bottom border-1 border-secondary">
-                                    <i class="fas fa-bar-chart me-1"></i>
-                                    <a class="text-light" href="">Performance Ratings</a>
+                        
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-chart-line me-1 text-info"></i>
+                                        <a class="text-light" href="">Performance Ratings</a>
+                                    </div>
+                                   <!-- <div class="badgeT bg-info text-dark rounded-pill px-3 py-2">
+                                        <?php echo number_format($totalAverage, 2); ?> / 5.0
+                                    </div> -->
                                 </div>
-                                <div class="chart-container" style="position: relative; height: 400px; width: 100%;">
+                                <div class="chart-container">
                                     <canvas id="performanceRadarChart"></canvas>
                                 </div>
                             </div>
                         </div>
-                        <div class="row mb-4">
-                            <div class="col-md-12 mt-2 mb-2">
-                                <div class="card bg-dark text-light border-0">
-                                    <div class="card-header border-bottom border-1 border-secondary">
-                                        <i class="fas fa-line-chart me-1"></i> 
-                                        <a class="text-light" href="">Top Perfomers</a>
+                        
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-trophy me-1 text-warning"></i> 
+                                        <a class="text-light" href="">Top Performers</a>
                                     </div>
-                                    <div class="card-body">
-                                        <ul class="list-group list-group-flush">
-                                            <!-- Performer 1 -->
-                                            <li class="list-group-item bg-dark text-light d-flex align-items-center justify-content-between border-0">
-                                                <div class="d-flex align-items-center">
-                                                    <img src="../../uploads/profile_pictures/try.jpg" alt="Performer 1" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                                                    <div>
-                                                        <h5 class="mb-0">John Doe</h5>
-                                                        <small class="text-warning">Sales Manager</small>
+                                    <div class="badgeT bg-dark text-light rounded-pill px-3 py-2">
+                                        March 2025
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-4">
+                                        <!-- Performer 1 -->
+                                        <div class="col-md-4">
+                                            <div class="card bg-dark bg-opacity-50 border-0 h-100">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <img src="../../uploads/profile_pictures/try.jpg" alt="Performer 1" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                                        <div>
+                                                            <h5 class="mb-3">John Doe</h5>
+                                                            <span class="badgeT bg-warning text-dark mt-1">Sales Manager</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-light">Performance</span>
+                                                        <span class="text-success fw-bold">90%</span>
+                                                    </div>
+                                                    <div class="progress mb-3" style="height: 8px;">
+                                                        <div class="progress-bar bg-success" role="progressbar" style="width: 90%;" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between text-muted">
+                                                        <small><i class="fas fa-tasks me-1"></i> 24 Tasks</small>
+                                                        <small><i class="fas fa-star me-1"></i> 4.8/5.0</small>
                                                     </div>
                                                 </div>
-                                                <div class="progress" style="width: 30%; height: 8px;">
-                                                    <div class="progress-bar bg-success" role="progressbar" style="width: 90%;" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </li>
-                                            <!-- Performer 2 -->
-                                            <li class="list-group-item bg-dark text-light d-flex align-items-center justify-content-between border-0">
-                                                <div class="d-flex align-items-center">
-                                                    <img src="../../uploads/profile_pictures/pfp3.jpg" alt="Performer 2" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                                                    <div>
-                                                        <h5 class="mb-0">Jane Smith</h5>
-                                                        <small class="text-warning">Marketing Specialist</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Performer 2 -->
+                                        <div class="col-md-4">
+                                            <div class="card bg-dark bg-opacity-50 border-0 h-100">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <img src="../../uploads/profile_pictures/pfp3.jpg" alt="Performer 2" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                                        <div>
+                                                            <h5 class="mb-3">Jane Smith</h5>
+                                                            <span class="badgeT bg-warning text-dark mt-1">Marketing Specialist</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-light">Performance</span>
+                                                        <span class="text-success fw-bold">85%</span>
+                                                    </div>
+                                                    <div class="progress mb-3" style="height: 8px;">
+                                                        <div class="progress-bar bg-success" role="progressbar" style="width: 85%;" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between text-muted">
+                                                        <small><i class="fas fa-tasks me-1"></i> 19 Tasks</small>
+                                                        <small><i class="fas fa-star me-1"></i> 4.5/5.0</small>
                                                     </div>
                                                 </div>
-                                                <div class="progress" style="width: 30%; height: 8px;">
-                                                    <div class="progress-bar bg-success" role="progressbar" style="width: 85%;" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </li>
-                                            <!-- Performer 3 -->
-                                            <li class="list-group-item bg-dark text-light d-flex align-items-center justify-content-between border-0">
-                                                <div class="d-flex align-items-center">
-                                                    <img src="../../uploads/profile_pictures/logo.jpg" alt="Performer 3" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                                                    <div>
-                                                        <h5 class="mb-0">Michael Johnson</h5>
-                                                        <small class="text-warning">HR Manager</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Performer 3 -->
+                                        <div class="col-md-4">
+                                            <div class="card bg-dark bg-opacity-50 border-0 h-100">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <img src="../../uploads/profile_pictures/logo.jpg" alt="Performer 3" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                                        <div>
+                                                            <h5 class="mb-3">Michael Johnson</h5>
+                                                            <span class="badgeT bg-warning text-dark mt-1">HR Manager</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-light">Performance</span>
+                                                        <span class="text-success fw-bold">80%</span>
+                                                    </div>
+                                                    <div class="progress mb-3" style="height: 8px;">
+                                                        <div class="progress-bar bg-success" role="progressbar" style="width: 80%;" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between text-muted">
+                                                        <small><i class="fas fa-tasks me-1"></i> 17 Tasks</small>
+                                                        <small><i class="fas fa-star me-1"></i> 4.2/5.0</small>
                                                     </div>
                                                 </div>
-                                                <div class="progress" style="width: 30%; height: 8px;">
-                                                    <div class="progress-bar bg-success" role="progressbar" style="width: 80%;" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                                                </div>
-                                            </li>
-                                        </ul>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -303,75 +533,108 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                     </div>
                 </div>
             </main>
-                <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content bg-dark text-light">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            
+            <!-- Logout Modal -->
+            <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-sign-out-alt text-warning fa-2x me-3"></i>
+                                <p class="mb-0">Are you sure you want to log out?</p>
                             </div>
-                            <div class="modal-body">
-                                Are you sure you want to log out?
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn border-secondary text-light" data-bs-dismiss="modal">Cancel</button>
-                                <form action="../../employee/logout.php" method="POST">
-                                    <button type="submit" class="btn btn-danger">Logout</button>
-                                </form>
-                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                            <form action="../../employee/logout.php" method="POST">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
-                <div class="modal fade" id="attendanceModal" tabindex="-1" aria-labelledby="timeInfoModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content bg-dark text-light">
-                            <!-- Modal Header -->
-                            <div class="modal-header border-bottom border-secondary">
-                                <h5 class="modal-title fw-bold" id="timeInfoModalLabel">Attendance Information</h5>
-                                <button type="button" class="btn-close text-light" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
+            </div>
+            
+            <!-- Attendance Modal -->
+            <div class="modal fade" id="attendanceModal" tabindex="-1" aria-labelledby="timeInfoModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <!-- Modal Header -->
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold" id="timeInfoModalLabel">
+                                <i class="fas fa-calendar-check me-2 text-info"></i>Attendance Information
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
 
-                            <!-- Modal Body -->
-                            <div class="modal-body">
-                                <div class="d-flex flex-wrap justify-content-around align-items-start text-center gap-4">
-                                    <div class="d-flex flex-column gap-4 mb-2">
-                                        <div>
-                                            <h6 class="fw-bold text-light text-start">Date:</h6>
-                                            <p class="fw-bold text-info mb-0 text-start" id="attendanceDate"></p>
-                                        </div>
-
-                                        <div>
-                                            <h6 class="fw-bold text-light text-start">Time In:</h6>
-                                            <p class="fw-bold text-info mb-0 text-start" id="timeIn"></p>
+                        <!-- Modal Body -->
+                        <div class="modal-body">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="card bg-dark bg-opacity-50 border-0">
+                                        <div class="card-body">
+                                            <h6 class="fw-bold text-light mb-3">
+                                                <i class="fas fa-calendar-day me-2 text-info"></i>Date
+                                            </h6>
+                                            <p class="fw-bold text-info mb-0 fs-5" id="attendanceDate"></p>
                                         </div>
                                     </div>
-
-                                    <div class="d-flex flex-column gap-4">
-                                        <div>
-                                            <h6 class="fw-bold text-light text-start">Status:</h6>
-                                            <p class="fw-bold mb-0 text-start" id="workStatus"></p>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card bg-dark bg-opacity-50 border-0">
+                                        <div class="card-body">
+                                            <h6 class="fw-bold text-light mb-3">
+                                                <i class="fas fa-check-circle me-2 text-info"></i>Status
+                                            </h6>
+                                            <p class="fw-bold mb-0 fs-5" id="workStatus"></p>
                                         </div>
-
-                                        <div>
-                                            <h6 class="fw-bold text-light text-start">Time Out:</h6>
-                                            <p class="fw-bold text-info mb-0 text-start" id="timeOut"></p>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card bg-dark bg-opacity-50 border-0">
+                                        <div class="card-body">
+                                            <h6 class="fw-bold text-light mb-3">
+                                                <i class="fas fa-sign-in-alt me-2 text-info"></i>Time In
+                                            </h6>
+                                            <p class="fw-bold text-info mb-0 fs-5" id="timeIn"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card bg-dark bg-opacity-50 border-0">
+                                        <div class="card-body">
+                                            <h6 class="fw-bold text-light mb-3">
+                                                <i class="fas fa-sign-out-alt me-2 text-info"></i>Time Out
+                                            </h6>
+                                            <p class="fw-bold text-info mb-0 fs-5" id="timeOut"></p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="modal-footer border-top border-secondary">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Close
+                            </button>
                         </div>
                     </div>
                 </div>
+            </div>
+            
             <?php include 'footer.php'; ?>
         </div>
     </div>
 
 <script>
-
 // ATTENDANCE
 let currentMonth = new Date().getMonth(); // January is 0, December is 11
 let currentYear = new Date().getFullYear();
@@ -463,11 +726,12 @@ function renderCalendar(month, year, attendanceRecords = {}) {
             statusClass = 'text-dark'; // Black for multiple statuses
         } else {
             statusClass = status === 'Present' ? 'text-success' : // Green for Present/Present
-                          status === 'Absent' ? 'text-muted' : // Red for Absent
+                          status === 'Absent' ? 'text-danger' : // Red for Absent
                           status === 'Late' ? 'text-warning' : // Yellow for Late
                           status === 'Half-Day' ? 'text-success' : // Light for Half-Day
                           status === 'Early Out' ? 'text-warning' : // warning for Early Out
-                          status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' : ''; // Muted for Day Off, Holidays, and On Leave
+                          status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' : 
+                          'text-default'; // Default color for days with no specific status
         }
 
         calendarHTML += `
@@ -509,11 +773,12 @@ function renderCalendar(month, year, attendanceRecords = {}) {
                 statusClass = 'text-dark'; // Black for multiple statuses
             } else {
                 statusClass = status === 'Present' ? 'text-success' : // Green for Present/Present
-                              status === 'Absent' ? 'text-muted' : // Red for Absent
+                              status === 'Absent' ? 'text-danger' : // Red for Absent
                               status === 'Late' ? 'text-warning' : // Yellow for Late
                               status === 'Half-Day' ? 'text-success' : // Light for Half-Day
                               status === 'Early Out' ? 'text-warning' : // warning for Early Out
-                              status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' : ''; // Muted for Day Off, Holidays, and On Leave
+                              status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' : 
+                              'text-default'; // Default color for days with no specific status
             }
 
             calendarHTML += `
@@ -540,7 +805,7 @@ function renderCalendar(month, year, attendanceRecords = {}) {
 
     document.getElementById('ATTENDANCEcalendar').innerHTML = calendarHTML;
     document.getElementById('monthYearDisplay').textContent = `${monthNames[month]} ${year}`;
-    document.getElementById('todaysDate').textContent = `${monthNames[new Date().getMonth()]} ${new Date().getDate()}, ${new Date().getFullYear()}`;
+    document.getElementById('todaysDateContent').textContent = `${monthNames[new Date().getMonth()]} ${new Date().getDate()}, ${new Date().getFullYear()}`;
 }
 
 // Fetch attendance for the given month and year
@@ -632,7 +897,7 @@ async function showAttendanceDetails(day) {
 
                 const statusElement = document.getElementById('workStatus');
                 statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
-                statusElement.classList.add('text-muted'); // Use a muted color for "Absent"
+                statusElement.classList.add('text-danger'); // Changed to danger color for "Absent"
             } else {
                 const timeInFormatted = data.time_in ? formatTimeWithAmPm(data.time_in) : 'Absent';
                 const timeOutFormatted = data.time_out ? formatTimeWithAmPm(data.time_out) : 'Absent';
@@ -664,7 +929,7 @@ async function showAttendanceDetails(day) {
                             span.classList.add('text-success'); // Green for Present
                             break;
                         case 'Absent':
-                            span.classList.add('text-muted'); // Red for Absent
+                            span.classList.add('text-danger'); // Red for Absent
                             break;
                         case 'Day Off':
                             span.classList.add('text-danger'); // Light for Day Off
@@ -679,7 +944,7 @@ async function showAttendanceDetails(day) {
                             span.classList.add('text-warning'); // warning for Early Out
                             break;
                         default:
-                            span.classList.add('text-dark'); // Default color
+                            span.classList.add('text-default'); // Default color
                     }
 
                     statusElement.appendChild(span);
@@ -829,8 +1094,8 @@ const performanceRadarChart = new Chart(ctx, {
                     parseFloat(evaluationData.avg_punctuality || 0).toFixed(2), // Fallback to 0 if invalid
                     parseFloat(evaluationData.avg_initiative || 0).toFixed(2) // Fallback to 0 if invalid
                 ],
-                backgroundColor: 'rgba(54, 162, 235, 0.2)', // Light blue fill
-                borderColor: 'rgba(54, 162, 235, 1)', // Blue border
+                backgroundColor: 'rgba(26, 188, 156, 0.2)', // Light teal fill
+                borderColor: 'rgba(26, 188, 156, 1)', // Teal border
                 borderWidth: 2
             },
             {
@@ -842,8 +1107,8 @@ const performanceRadarChart = new Chart(ctx, {
                     parseFloat(evaluationData.totalAverage || 0).toFixed(2), // Fallback to 0 if invalid
                     parseFloat(evaluationData.totalAverage || 0).toFixed(2) // Fallback to 0 if invalid
                 ],
-                backgroundColor: 'rgba(255, 99, 132, 0.2)', // Light red fill
-                borderColor: 'rgba(255, 99, 132, 1)', // Red border
+                backgroundColor: 'rgba(52, 152, 219, 0.2)', // Light blue fill
+                borderColor: 'rgba(52, 152, 219, 1)', // Blue border
                 borderWidth: 2
             }
         ]
@@ -853,10 +1118,10 @@ const performanceRadarChart = new Chart(ctx, {
             r: {
                 angleLines: {
                     display: true,
-                    color: 'rgba(200, 200, 200, 0.2)' // Customize angle line color
+                    color: 'rgba(255, 255, 255, 0.2)' // Customize angle line color
                 },
                 grid: {
-                    color: 'rgba(255, 255, 255, 0.2)' // Customize grid line color
+                    color: 'rgba(255, 255, 255, 0.1)' // Customize grid line color
                 },
                 suggestedMin: 0,
                 suggestedMax: 6,
@@ -865,11 +1130,11 @@ const performanceRadarChart = new Chart(ctx, {
                     display: false // Hide the tick labels (1 to 6)
                 },
                 pointLabels: {
-                    color: 'white', // Change label color (e.g., teal)
+                    color: 'white', // Change label color
                     font: {
-                        size: 14, // Change label font size
+                        size: getDynamicFontSize(), // Dynamic font size
                         weight: 'bold', // Make label text bold
-                        family: 'Arial' // Change label font family
+                        family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' // Change label font family
                     },
                     padding: 15
                 }
@@ -878,10 +1143,25 @@ const performanceRadarChart = new Chart(ctx, {
         plugins: {
             legend: {
                 display: true,
-                position: 'left'
+                position: 'top',
+                labels: {
+                    color: 'white',
+                    font: {
+                        family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+                    }
+                }
             },
             tooltip: {
                 enabled: true, // Enable tooltips
+                backgroundColor: 'rgba(22, 33, 62, 0.8)',
+                titleFont: {
+                    family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                    size: 14
+                },
+                bodyFont: {
+                    family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                    size: 13
+                },
                 callbacks: {
                     label: function (context) {
                         // Format tooltip value to 2 decimal places
@@ -892,7 +1172,7 @@ const performanceRadarChart = new Chart(ctx, {
             datalabels: {
                 color: function (context) {
                     // Use different colors for the two datasets
-                    return context.datasetIndex === 0 ? 'cyan' : 'pink'; // Customize data label colors
+                    return context.datasetIndex === 0 ? '#1abc9c' : '#3498db'; // Customize data label colors
                 },
                 anchor: 'center', // Position the label at the center of the point
                 align: function (context) {
@@ -906,7 +1186,7 @@ const performanceRadarChart = new Chart(ctx, {
                 font: {
                     weight: 'bold', // Make the text bold
                     size: getDynamicFontSize(), // Use dynamic font size
-                    family: 'Arial' // Optional: Set font family
+                    family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' // Set font family
                 }
             }
         },
@@ -924,13 +1204,16 @@ function updateChartOnResize() {
 
 // Add event listener for window resize
 window.addEventListener('resize', updateChartOnResize);
+
+// Set today's date in the header
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('todaysDateContent').textContent = today.toLocaleDateString('en-US', options);
+});
 </script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../js/employee.js"></script>
-
-
 </body>
-
 </html>
-

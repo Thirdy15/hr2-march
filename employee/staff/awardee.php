@@ -1,7 +1,7 @@
 <?php
 // Start session and check admin login
 session_start();
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
+if (!isset($_SESSION['employe_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
@@ -10,8 +10,8 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['
 include '../../db/db_conn.php';
 
 // Fetch user info
-$employeeId = $_SESSION['employee_id'];
-$sql = "SELECT employee_id, first_name, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE employee_id = ?";
+$employeeId = $_SESSION['employe_id'];
+$sql = "SELECT employe_id, first_name, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE employe_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $employeeId);
 $stmt->execute();
@@ -20,11 +20,11 @@ $employeeInfo = $result->fetch_assoc();
 
 function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) {
     // SQL query to fetch the highest average score for each employee
-    $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, 
+    $sql = "SELECT e.employe_id, e.first_name, e.last_name, e.department, e.pfp, 
                    AVG(ae.$criterion) AS avg_score
             FROM employee_register e
-            JOIN admin_evaluations ae ON e.employee_id = ae.employee_id
-            GROUP BY e.employee_id
+            JOIN admin_evaluations ae ON e.employe_id = ae.employe_id
+            GROUP BY e.employe_id
             ORDER BY avg_score DESC
             LIMIT 1";  // Select the top employee with the highest average score
 
@@ -65,7 +65,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
             echo "<h1 class='card-title' style='font-size: 40px; font-weight: bold; color: #333;'>" . htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) . "</h1>";
             echo "<p class='card-text fs-5 text-dark'><strong>Department:</strong> " . htmlspecialchars($row['department']) . "</p>";
             echo "<p class='card-text fs-5 text-dark'><strong>$criterionLabel Score:</strong> " . number_format($row['avg_score'], 2) . "</p>";  // Display average score
-            echo "<p class='card-text fs-5 text-dark'><strong>Employee ID:</strong> " . htmlspecialchars($row['employee_id']) . "</p>";
+            echo "<p class='card-text fs-5 text-dark'><strong>Employee ID:</strong> " . htmlspecialchars($row['employe_id']) . "</p>";
             echo "</div>"; // End of card-body
             echo "</div>"; // End of col-md-8
             echo "</div>"; // End of row
@@ -411,4 +411,3 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
 // Close the database connection
 $conn->close();
 ?> 
-
