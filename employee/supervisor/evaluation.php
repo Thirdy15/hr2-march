@@ -729,7 +729,7 @@ $conn->close();
                         </div>
                         <div>
                             <h5 class="mb-1">${employeeName}</h5>
-                            <span class="badge bg-info text-dark">${employeeRole}</span>
+                            <span class="badgeT bg-info text-dark">${employeeRole}</span>
                         </div>
                     </div>
                 `;

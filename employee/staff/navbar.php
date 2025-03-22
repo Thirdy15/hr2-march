@@ -1,5 +1,15 @@
-<style>
-                .nav-link .fa-bell {
+<?php
+include '../../db/db_conn.php';
+// Fetch notifications for the employee
+$notificationQuery = "SELECT * FROM notifications WHERE employee_id = ? ORDER BY created_at DESC";
+$notificationStmt = $conn->prepare($notificationQuery);
+$notificationStmt->bind_param("i", $employeeId);
+$notificationStmt->execute();
+$notifications = $notificationStmt->get_result();
+?>
+
+    <style>
+        .nav-link .fa-bell {
             font-size: 1.25rem;
             color: #fff; /* White color for the bell icon */
         }
@@ -12,15 +22,6 @@
             font-size: 0.75rem;
             padding: 0.25rem 0.5rem;
             background-color: #dc3545; /* Red color for the badge */
-        }
-
-        /* Dropdown Menu */
-        .dropdown-menu {
-            max-height: 300px;
-            overflow-y: auto;
-            width: 300px;
-            border: 1px solid #ddd; /* Light border */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
         }
 
         /* Notification Item */
@@ -88,7 +89,7 @@
 
 
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark border-bottom border-1 border-secondary">
-        <a class="navbar-brand d-none d-md-inline-block form-inline ps-3 text-muted" href="../../employee/staff/dashboard.php">Employee Portal</a>
+        <a class="navbar-brand d-none d-md-inline-block form-inline ps-3 text-light" href="../../employee/staff/dashboard.php">Employee Portal</a>
         <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" href="#!"><i class="fas fa-bars text-light"></i></button>
         <div class="d-flex ms-auto me-0 me-md-3 my-2 my-md-0 align-items-center">
             <div class="d-none d-md-inline-block form-inline text-light me-3 p-2 rounded shadow-sm bg-light" id="currentTimeContainer">
@@ -236,8 +237,7 @@
             { name: "Leave Request", link: "../../employee/staff/leave_request.php", path: "Leave Management/Leave Request" },
             { name: "Evaluation Ratings", link: "../../employee/staff/evaluation.php", path: "Performance Management/Evaluation Ratings" },
             { name: "File Leave", link: "../../employee/staff/leave_file.php", path: "Leave Management/File Leave" },
-            { name: "Awardee", link: "../../employee/staff/awardee.php", path: "Social Recognition/Awardee" },
-            { name: "Profile", link: "../../employee/staff/profile.php", path: "Profile" },
+            { name: "View Your Rating", link: "../../employee/staff/social_recognition.php", path: "Social Recognition/View Your Rating" },
             { name: "Report Issue", link: "../../employee/staff/report_issue.php", path: "Feedback/Report Issue" }
         ];
 
@@ -292,7 +292,7 @@
                     const notificationId = notificationItem.querySelector('.delete-notification').dataset.id;
 
                     // Mark the notification as read
-                    fetch('../../employee_db/db/markNotif.php', {
+                    fetch('../../employee_db/staff/markNotif.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -325,7 +325,7 @@
                     const notificationId = event.target.closest('.delete-notification').dataset.id;
 
                     // Delete the notification
-                    fetch('../../employee_db/deleteNotif.php', {
+                    fetch('../../employee_db/staff/deleteNotif.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

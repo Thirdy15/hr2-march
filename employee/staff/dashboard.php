@@ -7,17 +7,53 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['
 
 include '../../db/db_conn.php';
 
-// Fetch user info
 $employeeId = $_SESSION['employee_id'];
+$employeeRole = $_SESSION['role'];
+
+// Fetch the average of the employee's evaluations
+$sql = "SELECT 
+            AVG(quality) AS avg_quality, 
+            AVG(communication_skills) AS avg_communication_skills, 
+            AVG(teamwork) AS avg_teamwork, 
+            AVG(punctuality) AS avg_punctuality, 
+            AVG(initiative) AS avg_initiative,
+            COUNT(*) AS total_evaluations 
+        FROM ptp_evaluations 
+        WHERE employee_id = ?";
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $employeeId);
+$stmt->execute();
+$result = $stmt->get_result();
+
+// Check if evaluations exist
+if ($result->num_rows > 0) {
+    $evaluation = $result->fetch_assoc();
+
+    // Calculate the total average
+    $totalAverage = (
+        $evaluation['avg_quality'] +
+        $evaluation['avg_communication_skills'] +
+        $evaluation['avg_teamwork'] +
+        $evaluation['avg_punctuality'] +
+        $evaluation['avg_initiative']
+    ) / 5;
+} else {
+    echo "No evaluations found.";
+    exit;
+}
+
+// Fetch user info
 $sql = "SELECT first_name, middle_name, last_name, email, role, position, pfp FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $employeeId);
+$stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
 $stmt->close();
 $conn->close();
 
+// Set the profile picture, default if not provided
 $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../img/defaultpfp.png';
 ?>
 
@@ -27,12 +63,14 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="" />
+    <meta name="description" content="Staff Dashboard for HR Management System" />
     <meta name="author" content="" />
     <title>Employee Dashboard | HR2</title>
     <link href="../../css/styles.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <link href="../../css/calendar.css" rel="stylesheet"/>
-    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet'/>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -43,128 +81,129 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
             --danger-color: #e74c3c;
             --warning-color: #f39c12;
             --success-color: #2ecc71;
-            --bg-dark: rgba(33, 37, 41) !important;
-            --bg-black: rgba(16, 17, 18) !important;
-            --card-bg: rgba(33, 37, 41) !important;
+            --bg-dark: rgba(33, 37, 41) !important; 
+            --bg-black: rgba(16, 17, 18) !important; 
+            --card-bg: rgba(33, 37, 41) !important; 
             --text-light: #ecf0f1;
             --border-color: rgba(255, 255, 255, 0.1);
-            --default-day-color: #6c757d;
+            --default-day-color: #6c757d; /* Default color for days with no status */
         }
-
+        
         body {
-            background: rgba(16, 17, 18) !important;
+            background:  rgba(16, 17, 18) !important; 
             color: var(--text-light);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
+        
         .sb-nav-fixed {
-            background: rgba(16, 17, 18) !important;
+            background:  rgba(16, 17, 18) !important; 
         }
-
+        
         #layoutSidenav_content {
-            background: rgba(16, 17, 18) !important;
+            background: rgba(16, 17, 18) !important; 
         }
-
+        
         .card {
-            background: rgba(33, 37, 41) !important;
+            background: rgba(33, 37, 41) !important; 
             border: none;
             border-radius: 12px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             transition: transform 0.3s, box-shadow 0.3s;
             overflow: hidden;
         }
-
+        
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
         }
-
+        
         .card-header {
-            background: rgba(33, 37, 41) !important;
+            background:  rgba(33, 37, 41) !important; 
             border-bottom: 1px solid var(--border-color);
             padding: 1rem 1.5rem;
             font-weight: 600;
         }
-
+        
         .card-header i {
-            color: var(--accent-color);
+            color: var(--accent-color); /* Fixed icon color */
             margin-right: 10px;
         }
-
+        
         .card-header a {
             text-decoration: none;
             color: var(--text-light);
             transition: color 0.2s;
         }
-
+        
         .card-header a:hover {
-            color: var(--accent-color);
+            color: var(--accent-color); /* Fixed hover color */
         }
-
+        
         .btn-primary {
-            background: #3498db !important;
+            background: #3498db !important; /* Fixed button color */
             border: none;
             border-radius: 8px;
             transition: all 0.3s;
         }
-
+        
         .btn-primary:hover {
-            background: #2980b9 !important;
+            background: #2980b9 !important; /* Fixed hover color */
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
-
+        
         .btn-danger {
-            background: #e74c3c !important;
+            background: #e74c3c !important; /* Fixed danger button color */
             border: none;
             border-radius: 8px;
         }
-
+        
         .progress {
             height: 8px;
             border-radius: 4px;
-            background: rgba(0, 0, 0, 0.2) !important;
+            background: rgba(0, 0, 0, 0.2) !important; /* Fixed progress background */
             overflow: hidden;
         }
-
+        
         .progress-bar {
             border-radius: 4px;
         }
-
+        
         .list-group-item {
-            background: rgba(33, 37, 41, 0.7) !important;
+            background: rgba(33, 37, 41, 0.7) !important; /* Fixed list item background */
             border-bottom: 1px solid var(--border-color);
             padding: 1rem;
             transition: background 0.2s;
         }
-
+        
         .list-group-item:hover {
-            background: rgba(33, 37, 41, 0.9) !important;
+            background: rgba(33, 37, 41, 0.9) !important; /* Fixed hover background */
         }
-
+        
         .rounded-circle {
             border: 3px solid var(--secondary-color);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
-
+        
         .modal-content {
-            background: rgba(33, 37, 41) !important;
+            background: rgba(33, 37, 41) !important; /* Fixed modal background */
             border-radius: 12px;
             border: 1px solid var(--border-color);
         }
-
+        
         .modal-header, .modal-footer {
             border-color: var(--border-color);
         }
-
+        
         .btn-close-white {
             filter: brightness(0) invert(1);
         }
-
+        
+        /* Calendar Styles */
         #ATTENDANCEcalendar .col {
             padding: 5px;
         }
-
+        
         #ATTENDANCEcalendar .btn {
             border-radius: 50%;
             width: 40px;
@@ -173,119 +212,124 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
             align-items: center;
             justify-content: center;
             transition: all 0.3s;
-            background-color: rgba(33, 37, 41, 0.5);
+            background-color: rgba(33, 37, 41, 0.5); /* Default background for all days */
         }
-
+        
         #ATTENDANCEcalendar .btn:hover {
             transform: scale(1.1);
             box-shadow: 0 0 10px rgba(26, 188, 156, 0.5);
-            background-color: rgba(33, 37, 41, 0.8);
+            background-color: rgba(33, 37, 41, 0.8); /* Darker on hover */
         }
-
+        
         .text-success {
             color: var(--success-color) !important;
         }
-
+        
         .text-warning {
             color: var(--warning-color) !important;
         }
-
+        
         .text-danger {
             color: var(--danger-color) !important;
         }
-
+        
         .text-info {
             color: var(--accent-color) !important;
         }
-
+        
         .text-default {
-            color: var(--default-day-color) !important;
+            color: var(--default-day-color) !important; /* Default color for days with no status */
         }
-
+        
+        /* Badge styles */
         .badgeT {
             padding: 3px;
             font-weight: 600;
             border-radius: 30px;
         }
-
+        
+        /* Form controls */
         .form-control {
-            background: rgba(33, 37, 41, 0.5) !important;
+            background: rgba(33, 37, 41, 0.5) !important; /* Fixed form control background */
             border: 1px solid var(--border-color);
             color: var(--text-light);
             border-radius: 8px;
             padding: 0.75rem 1rem;
         }
-
+        
         .form-control:focus {
-            background: rgba(33, 37, 41, 0.7) !important;
+            background: rgba(33, 37, 41, 0.7) !important; /* Fixed focus background */
             border-color: var(--secondary-color);
             box-shadow: 0 0 0 0.25rem rgba(26, 188, 156, 0.25);
             color: var(--text-light);
         }
-
+        
+        /* Chart container */
         .chart-container {
             position: relative;
             height: 400px;
             width: 100%;
             padding: 1rem;
         }
-
+        
+        /* Responsive adjustments */
         @media (max-width: 767.98px) {
             #ATTENDANCEcalendar .btn span {
                 font-size: 0.9rem;
             }
-
+            
             #ATTENDANCEcalendar .col {
                 padding: 2px;
             }
-
+            
             #ATTENDANCEcalendar .btn {
                 height: 35px !important;
                 width: 35px !important;
             }
-
+            
             .chart-container {
                 height: 300px;
             }
         }
-
+        
         @media (max-width: 575.98px) {
             #ATTENDANCEcalendar .btn span {
                 font-size: 0.8rem;
             }
-
+            
             #ATTENDANCEcalendar .col {
                 padding: 1px;
             }
-
+            
             #ATTENDANCEcalendar .btn {
                 height: 30px !important;
                 width: 30px !important;
             }
-
+            
             .chart-container {
                 height: 250px;
             }
-
+            
             .row.text-center.fw-bold .col {
                 font-size: 0.8rem;
                 padding: 2px;
             }
         }
-
+        
+        /* Animation effects */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
+        
         .card {
             animation: fadeIn 0.5s ease-out forwards;
         }
-
+        
         .card:nth-child(2) {
             animation-delay: 0.2s;
         }
-
+        
         .card:nth-child(3) {
             animation-delay: 0.4s;
         }
@@ -293,166 +337,50 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
 </head>
 
 <body class="sb-nav-fixed">
-    <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark border-bottom border-1 border-warning">
-        <a class="navbar-brand ps-3 text-light" href="../../employee/staff/dashboard.php">Employee Portal</a>
-        <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" href="#!"><i class="fas fa-bars text-light"></i></button>
-        <div class="d-flex ms-auto me-0 me-md-3 my-2 my-md-0 align-items-center">
-            <div class="text-light me-3 p-2 rounded shadow-sm bg-gradient" id="currentTimeContainer"
-                style="background: linear-gradient(45deg, #333333, #444444); border-radius: 5px;">
-                <span class="d-flex align-items-center">
-                    <span class="pe-2">
-                        <i class="fas fa-clock"></i>
-                        <span id="currentTime">00:00:00</span>
-                    </span>
-                    <button class="btn btn-outline-warning btn-sm ms-2" type="button" onclick="toggleCalendar()">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span id="currentDate">00/00/0000</span>
-                    </button>
-                </span>
-            </div>
-            <form class="d-none d-md-inline-block form-inline">
-                <div class="input-group">
-                    <input class="form-control" type="text" placeholder="Search for..." aria-label="Search for..." aria-describedby="btnNavbarSearch" />
-                    <button class="btn btn-warning" id="btnNavbarSearch" type="button"><i class="fas fa-search"></i></button>
-                </div>
-            </form>
-        </div>
-    </nav>
+    <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
-        <div id="layoutSidenav_nav">
-            <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
-                <div class="sb-sidenav-menu">
-                    <div class="nav">
-                        <div class="sb-sidenav-menu-heading text-center text-white">Your Profile</div>
-                        <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-light d-flex justify-content-center ms-4" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <img src="<?php echo (!empty($employeeInfo['pfp']) && $employeeInfo['pfp'] !== 'defaultpfp.png')
-                                        ? htmlspecialchars($employeeInfo['pfp'])
-                                        : '../../img/defaultpfp.jpg'; ?>"
-                                        class="rounded-circle border border-light" width="120" height="120" alt="" />
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <li><a class="dropdown-item" href="../../employee/staff/profile.php">Profile</a></li>
-                                    <li><a class="dropdown-item" href="#!">Settings</a></li>
-                                    <li><a class="dropdown-item" href="#!">Activity Log</a></li>
-                                    <li><hr class="dropdown-divider" /></li>
-                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">Logout</a></li>
-                                </ul>
-                            </li>
-                            <li class="nav-item text-light d-flex ms-3 flex-column align-items-center text-center">
-                                <span class="big text-light mb-1">
-                                    <?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']); ?>
-                                </span>
-                                <span class="big text-light">
-                                    <?php echo htmlspecialchars($employeeInfo['position']); ?>
-                                </span>
-                            </li>
-                        </ul>
-                        <div class="sb-sidenav-menu-heading text-center text-muted border-top border-1 border-warning mt-3">Employee Dashboard</div>
-                        <a class="nav-link text-light" href="../../employee/staff/dashboard.php">
-                            <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
-                            Dashboard
-                        </a>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseTAD" aria-expanded="false" aria-controls="collapseTAD">
-                            <div class="sb-nav-link-icon"><i class="fa fa-address-card"></i></div>
-                            Time and Attendance
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseTAD" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light" href="../../employee/staff/attendance.php">Attendance Scanner</a>
-                                <a class="nav-link text-light" href="">View Attendance Record</a>
-                                <a class="nav-link text-light" href="../../admin/timeout.php">Time Out</a>
-                            </nav>
-                        </div>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseLM" aria-expanded="false" aria-controls="collapseLM">
-                            <div class="sb-nav-link-icon"><i class="fas fa-calendar-times"></i></div>
-                            Leave Management
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseLM" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light" href="../../employee/staff/leave_file.php">File Leave</a>
-                                <a class="nav-link text-light" href="../../employee/staff/leave_balance.php">View Remaining Leave</a>
-                            </nav>
-                        </div>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePM" aria-expanded="false" aria-controls="collapsePM">
-                            <div class="sb-nav-link-icon"><i class="fas fa-line-chart"></i></div>
-                            Performance Management
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapsePM" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light" href="../../employee/staff/evaluation.php">Evaluation</a>
-                            </nav>
-                        </div>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseSR" aria-expanded="false" aria-controls="collapseSR">
-                            <div class="sb-nav-link-icon"><i class="fa fa-address-card"></i></div>
-                            Social Recognition
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseSR" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light" href="../../employee/staff/awardee.php">Awardee</a>
-                            </nav>
-                        </div>
-                        <div class="sb-sidenav-menu-heading text-center text-muted border-top border-1 border-warning mt-3">Feedback</div>
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseFB" aria-expanded="false" aria-controls="collapseFB">
-                            <div class="sb-nav-link-icon"><i class="fas fa-exclamation-circle"></i></div>
-                            Report Issue
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseFB" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light" href="">Report Issue</a>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-                <div class="sb-sidenav-footer bg-black border-top border-1 border-warning">
-                    <div class="small text-light">Logged in as: <?php echo htmlspecialchars($employeeInfo['role']); ?></div>
-                </div>
-            </nav>
-        </div>
+        <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
             <main>
-                <div class="container-fluid position-relative px-4">
+                <div class="container-fluid px-4 py-4">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h1 class="mb-0 text-light fw-bold">
                             <i class="fas fa-tachometer-alt me-2 text-info"></i>Dashboard
                         </h1>
-                    </div>
+                    </div>   
 
-                    <div class="container-fluid" id="calendarContainer"
-                        style="position: fixed; top: 7%; right: 40; z-index: 1050;
+                    <div class="container-fluid" id="calendarContainer" 
+                        style="position: fixed; top: 7%; right: 40; z-index: 1050; 
                         max-width: 100%; display: none;">
                         <div class="row">
                             <div class="col-md-9 mx-auto">
                                 <div id="calendar" class="p-2"></div>
                             </div>
                         </div>
-                    </div>
+                    </div> 
 
                     <div class="row g-4">
                         <div class="col-md-6">
                             <div class="card h-100">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <div>
-                                        <i class="fas fa-calendar-check me-1 text-info"></i>
-                                        <a class="text-light" href="../../employee/staff/attendance.php">Attendance</a>
+                                        <i class="fas fa-calendar-check me-1 text-info"></i> 
+                                        <a class="text-light" href="../../employee/staff/timesheet.php#timesheet">Attendance</a>
                                     </div>
+                                            
                                     <div class="bg-dark rounded-pill px-3 py-1">
                                         <span class="text-info">Time in: </span>
                                         <span class="text-light">08:11 AM</span>
                                     </div>
                                 </div>
+
                                 <div class="d-flex align-items-center">
                                     <div class="bg-dark rounded-pill px-3 py-2 d-flex align-items-center me-3">
-                                        <i class="fas fa-calendar-day me-2 text-info"></i>
-                                        <span id="todaysDateContent" class="text-light">March 21, 2025</span>
-                                    </div>
-                                </div>
+                                    <i class="fas fa-calendar-day me-2 text-info"></i>
+                                <span id="todaysDateContent" class="text-light">Mar 21, 2025</span>
+                            </div>
+                        </div>
+                                
                                 <div class="card-body overflow-auto" style="max-height: 400px;">
                                     <div class="mb-3">
                                         <label for="dateFilter" class="form-label">Filter by Date:</label>
@@ -475,6 +403,8 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                             <div class="col p-1">Fri</div>
                                             <div class="col p-1">Sat</div>
                                         </div>
+
+                                        <!-- Calendar rows with attendance status -->
                                         <div id="ATTENDANCEcalendar" class="pt-3 text-light rounded"></div>
                                     </div>
                                 </div>
@@ -488,7 +418,7 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                 </div>
                             </div>
                         </div>
-
+                        
                         <div class="col-md-6">
                             <div class="card h-100">
                                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -496,18 +426,21 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                         <i class="fas fa-chart-line me-1 text-info"></i>
                                         <a class="text-light" href="">Performance Ratings</a>
                                     </div>
+                                   <!-- <div class="badgeT bg-info text-dark rounded-pill px-3 py-2">
+                                        <?php echo number_format($totalAverage, 2); ?> / 5.0
+                                    </div> -->
                                 </div>
                                 <div class="chart-container">
                                     <canvas id="performanceRadarChart"></canvas>
                                 </div>
                             </div>
                         </div>
-
+                        
                         <div class="col-md-12">
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <div>
-                                        <i class="fas fa-trophy me-1 text-warning"></i>
+                                        <i class="fas fa-trophy me-1 text-warning"></i> 
                                         <a class="text-light" href="">Top Performers</a>
                                     </div>
                                     <div class="badgeT bg-dark text-light rounded-pill px-3 py-2">
@@ -516,6 +449,7 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-4">
+                                        <!-- Performer 1 -->
                                         <div class="col-md-4">
                                             <div class="card bg-dark bg-opacity-50 border-0 h-100">
                                                 <div class="card-body">
@@ -540,7 +474,8 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                                 </div>
                                             </div>
                                         </div>
-
+                                        
+                                        <!-- Performer 2 -->
                                         <div class="col-md-4">
                                             <div class="card bg-dark bg-opacity-50 border-0 h-100">
                                                 <div class="card-body">
@@ -565,7 +500,8 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                                 </div>
                                             </div>
                                         </div>
-
+                                        
+                                        <!-- Performer 3 -->
                                         <div class="col-md-4">
                                             <div class="card bg-dark bg-opacity-50 border-0 h-100">
                                                 <div class="card-body">
@@ -597,36 +533,46 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                     </div>
                 </div>
             </main>
-
+            
+            <!-- Logout Modal -->
             <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content bg-dark text-light">
-                        <div class="modal-header border-bottom border-warning">
+                    <div class="modal-content">
+                        <div class="modal-header">
                             <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            Are you sure you want to log out?
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-sign-out-alt text-warning fa-2x me-3"></i>
+                                <p class="mb-0">Are you sure you want to log out?</p>
+                            </div>
                         </div>
-                        <div class="modal-footer border-top border-warning">
-                            <button type="button" class="btn border-secondary text-light" data-bs-dismiss="modal">Cancel</button>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
                             <form action="../../employee/logout.php" method="POST">
-                                <button type="submit" class="btn btn-danger">Logout</button>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </button>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
+            <!-- Attendance Modal -->
             <div class="modal fade" id="attendanceModal" tabindex="-1" aria-labelledby="timeInfoModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
+                        <!-- Modal Header -->
                         <div class="modal-header">
                             <h5 class="modal-title fw-bold" id="timeInfoModalLabel">
                                 <i class="fas fa-calendar-check me-2 text-info"></i>Attendance Information
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
+
+                        <!-- Modal Body -->
                         <div class="modal-body">
                             <div class="row g-4">
                                 <div class="col-md-6">
@@ -639,6 +585,7 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="col-md-6">
                                     <div class="card bg-dark bg-opacity-50 border-0">
                                         <div class="card-body">
@@ -649,6 +596,7 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="col-md-6">
                                     <div class="card bg-dark bg-opacity-50 border-0">
                                         <div class="card-body">
@@ -659,6 +607,7 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="col-md-6">
                                     <div class="card bg-dark bg-opacity-50 border-0">
                                         <div class="card-body">
@@ -671,6 +620,7 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                 </div>
                             </div>
                         </div>
+
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">
                                 <i class="fas fa-times me-2"></i>Close
@@ -679,541 +629,590 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                     </div>
                 </div>
             </div>
-
-            <footer class="py-4 bg-light mt-auto bg-dark border-top border-1 border-warning">
-                <div class="container-fluid px-4">
-                    <div class="d-flex align-items-center justify-content-between small">
-                        <div class="text-muted">Copyright &copy; Your Website 2023</div>
-                        <div>
-                            <a href="#">Privacy Policy</a>
-                            &middot;
-                            <a href="#">Terms & Conditions</a>
-                        </div>
-                    </div>
-                </div>
-            </footer>
+            
+            <?php include 'footer.php'; ?>
         </div>
     </div>
 
-    <script>
-        // Global variable for calendar
-        let calendar;
+<script>
+// ATTENDANCE
+let currentMonth = new Date().getMonth(); // January is 0, December is 11
+let currentYear = new Date().getFullYear();
+let employeeId = <?php echo $employeeId; ?>; // Employee ID from PHP session
+let filteredDay = null; // Track the filtered day
 
-        function toggleCalendar() {
-            const calendarContainer = document.getElementById('calendarContainer');
-            if (calendarContainer.style.display === 'none' || calendarContainer.style.display === '') {
-                calendarContainer.style.display = 'block';
-                if (!calendar) {
-                    initializeCalendar();
-                }
+const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+const operationStartTime = new Date();
+operationStartTime.setHours(8, 10, 0, 0);
+
+const operationEndTime = new Date();
+operationEndTime.setHours(16, 0, 0, 0);
+
+// Function to format time with AM/PM
+function formatTimeWithAmPm(time24) {
+    if (!time24 || time24 === 'N/A') {
+        return 'No data';  // Handle cases where there's no data
+    }
+    
+    // Split time into hours and minutes
+    let [hour, minute] = time24.split(':');
+    hour = parseInt(hour); // Convert hour to an integer
+    const amPm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12; // Convert 0 to 12 for midnight (12 AM)
+    return `${hour}:${minute} ${amPm}`;
+}
+
+// Function to calculate attendance status
+function calculateAttendanceStatus(timeIn, timeOut) {
+    let status = '';
+
+    if (timeIn && timeIn !== 'Absent') {
+        const timeInDate = new Date(`1970-01-01T${timeIn}:00`);
+        if (timeInDate > operationStartTime) {
+            status += 'Late';
+        }
+    }
+
+    if (timeOut && timeOut !== 'Absent') {
+        const timeOutDate = new Date(`1970-01-01T${timeOut}:00`);
+        if (timeOutDate > operationEndTime) {
+            if (status) {
+                status += ' & Overtime';
             } else {
-                calendarContainer.style.display = 'none';
+                status = 'Overtime';
+            }
+        }
+    }
+
+    return status || 'Present'; // Default to "Present" if no issues
+}
+
+function renderCalendar(month, year, attendanceRecords = {}) {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    const currentDate = new Date(); // Get the current date
+    const currentDay = currentDate.getDate();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    let calendarHTML = '<div class="row text-center pt-3">';
+
+    // Fill empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+        calendarHTML += '<div class="col"></div>';
+    }
+
+    // Fill in the days of the month
+    let dayCounter = 1;
+    for (let i = firstDay; i < 7; i++) {
+        const dayStatus = attendanceRecords[dayCounter];
+        const status = (i === 0) ? 'Day Off' :
+                       (dayStatus && dayStatus.status === 'Holiday') ? 'Holiday' :
+                       dayStatus || '';
+
+        // Check for multiple statuses
+        const statusCount = Array.isArray(attendanceRecords[dayCounter]) ? attendanceRecords[dayCounter].length : 1;
+        const isFilteredDay = filteredDay && filteredDay.getDate() === dayCounter && filteredDay.getMonth() === month && filteredDay.getFullYear() === year;
+        const borderClass = isFilteredDay ? 'border border-2 border-light' : '';
+
+        // Check if the current day is today
+        const isToday = dayCounter === currentDay && month === currentMonth && year === currentYear;
+        const todayClass = isToday ? 'border border-2 border-light rounded-circle text-white d-flex align-items-center justify-content-center mx-auto' : ''; // Bootstrap classes for circle highlight
+
+        // Simplified status logic, adding 'text-muted' for holidays, leaves, and day off
+        let statusClass = '';
+        if (statusCount > 1) {
+            statusClass = 'text-dark'; // Black for multiple statuses
+        } else {
+            statusClass = status === 'Present' ? 'text-success' : // Green for Present/Present
+                          status === 'Absent' ? 'text-danger' : // Red for Absent
+                          status === 'Late' ? 'text-warning' : // Yellow for Late
+                          status === 'Half-Day' ? 'text-success' : // Light for Half-Day
+                          status === 'Early Out' ? 'text-warning' : // warning for Early Out
+                          status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' : 
+                          'text-default'; // Default color for days with no specific status
+        }
+
+        calendarHTML += `
+            <div class="col p-1">
+                <button class="btn text-light p-0 ${borderClass} ${todayClass}" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="showAttendanceDetails(${dayCounter})" style="width: 100%; height: 40px;">
+                    <span class="fw-bold ${statusClass}">
+                        ${dayCounter}
+                    </span>
+                </button>
+            </div>
+        `;
+        dayCounter++;
+    }
+    calendarHTML += '</div>';
+
+    // Continue filling rows for the remaining days
+    while (dayCounter <= daysInMonth) {
+        calendarHTML += '<div class="row text-center pt-3">';
+        let dayOfWeek = 0; // Reset for each row
+
+        for (let i = 0; i < 7 && dayCounter <= daysInMonth; i++) {
+            const dayStatus = attendanceRecords[dayCounter]; // Get the status for the current day
+            const status = (dayOfWeek === 0) ? 'Day Off' : // Set "Day Off" for Sundays (day 0)
+                           (dayStatus && dayStatus.status === 'Holiday') ? 'Holiday' :
+                           dayStatus || ''; // Fallback to the status or empty string
+
+            // Check for multiple statuses
+            const statusCount = Array.isArray(attendanceRecords[dayCounter]) ? attendanceRecords[dayCounter].length : 1;
+            const isFilteredDay = filteredDay && filteredDay.getDate() === dayCounter && filteredDay.getMonth() === month && filteredDay.getFullYear() === year;
+            const borderClass = isFilteredDay ? 'border border-2 border-light' : '';
+
+            // Check if the current day is today
+            const isToday = dayCounter === currentDay && month === currentMonth && year === currentYear;
+            const todayClass = isToday ? 'border border-2 border-light rounded-circle text-white d-flex align-items-center justify-content-center mx-auto' : ''; // Bootstrap classes for circle highlight
+
+            // Simplified status logic, adding 'text-muted' for holidays, leaves, and day off
+            let statusClass = '';
+            if (statusCount > 1) {
+                statusClass = 'text-dark'; // Black for multiple statuses
+            } else {
+                statusClass = status === 'Present' ? 'text-success' : // Green for Present/Present
+                              status === 'Absent' ? 'text-danger' : // Red for Absent
+                              status === 'Late' ? 'text-warning' : // Yellow for Late
+                              status === 'Half-Day' ? 'text-success' : // Light for Half-Day
+                              status === 'Early Out' ? 'text-warning' : // warning for Early Out
+                              status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' : 
+                              'text-default'; // Default color for days with no specific status
+            }
+
+            calendarHTML += `
+                <div class="col p-1">
+                    <button class="btn text-light p-0 ${borderClass} ${todayClass}" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="showAttendanceDetails(${dayCounter})" style="width: 100%; height: 40px;">
+                        <span class="fw-bold ${statusClass}">
+                            ${dayCounter}
+                        </span>
+                    </button>
+                </div>
+            `;
+            dayCounter++;
+            dayOfWeek++;
+        }
+
+        if (dayOfWeek < 7) {
+            for (let j = dayOfWeek; j < 7; j++) {
+                calendarHTML += '<div class="col p-1"></div>';
             }
         }
 
-        function initializeCalendar() {
-            const calendarEl = document.getElementById('calendar');
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                height: 440,
-                events: {
-                    url: '../../db/holiday.php',
-                    method: 'GET',
-                    failure: function() {
-                        alert('There was an error fetching events!');
-                    }
-                }
-            });
-            calendar.render();
+        calendarHTML += '</div>';
+    }
+
+    document.getElementById('ATTENDANCEcalendar').innerHTML = calendarHTML;
+    document.getElementById('monthYearDisplay').textContent = `${monthNames[month]} ${year}`;
+    document.getElementById('todaysDateContent').textContent = `${monthNames[new Date().getMonth()]} ${new Date().getDate()}, ${new Date().getFullYear()}`;
+}
+
+// Fetch attendance for the given month and year
+async function fetchAttendance(month, year) {
+    try {
+        const response = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?employee_id=${employeeId}&month=${month + 1}&year=${year}`);
+        const data = await response.json();
+
+        if (data.error) {
+            console.error('Error fetching attendance data:', data.error);
+            return;
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const currentDateElement = document.getElementById('currentDate');
-            const currentDate = new Date().toLocaleDateString();
-            currentDateElement.textContent = currentDate;
-        });
+        // Handle attendance records and render calendar
+        renderCalendar(month, year, data); // Pass attendance data to render calendar
+    } catch (error) {
+        console.error('Error fetching attendance data:', error);
+    }
+}
 
-        document.addEventListener('click', function(event) {
-            const calendarContainer = document.getElementById('calendarContainer');
-            const calendarButton = document.querySelector('button[onclick="toggleCalendar()"]');
-            if (!calendarContainer.contains(event.target) && !calendarButton.contains(event.target)) {
-                calendarContainer.style.display = 'none';
-            }
-        });
+// Show attendance details when a specific day is clicked
+async function showAttendanceDetails(day) {
+    const selectedDate = `${monthNames[currentMonth]} ${day}, ${currentYear}`;
+    document.getElementById('attendanceDate').textContent = selectedDate;
 
-        let currentMonth = new Date().getMonth();
-        let currentYear = new Date().getFullYear();
-        let employeeId = <?php echo $employeeId; ?>;
-        let filteredDay = null;
+    // Get the current date
+    const currentDate = new Date();
+    const selectedDateObj = new Date(currentYear, currentMonth, day);
+    const isCurrentOrPastDay = selectedDateObj <= currentDate;
 
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    // Check if the selected day is a Sunday
+    const isSunday = selectedDateObj.getDay() === 0; // Sunday is 0 in JavaScript's getDay()
 
-        const operationStartTime = new Date();
-        operationStartTime.setHours(8, 10, 0, 0);
+    const leaveResponse = await fetch(`/HR2/employee_db/supervisor/fetch_leave.php?employee_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
+    const leaveData = await leaveResponse.json();
 
-        const operationEndTime = new Date();
-        operationEndTime.setHours(16, 0, 0, 0);
+    if (leaveData.onLeave) {
+        document.getElementById('timeIn').textContent = `On Leave`;
+        document.getElementById('timeOut').textContent = `On Leave`;
+        document.getElementById('workStatus').textContent = leaveData.leaveType || 'On Leave'; // Fallback to 'On Leave' if leaveType is undefined
 
-        function formatTimeWithAmPm(time24) {
-            if (!time24 || time24 === 'N/A') {
-                return 'No data';
-            }
-            let [hour, minute] = time24.split(':');
-            hour = parseInt(hour);
-            const amPm = hour >= 12 ? 'PM' : 'AM';
-            hour = hour % 12 || 12;
-            return `${hour}:${minute} ${amPm}`;
+        const statusElement = document.getElementById('workStatus');
+        statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+        statusElement.classList.add('text-danger');
+    } else {
+        const attendanceResponse = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?employee_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
+        const data = await attendanceResponse.json();
+
+        if (data.error) {
+            console.error(data.error);
+            return;
         }
 
-        function calculateAttendanceStatus(timeIn, timeOut) {
-            let status = [];
-            if (onLeave) {
-                status.push('On Leave');
-                return status;
-            }
-            if (date.getDay() === 0) {
-                return ['Day Off'];
-            }
-            if (!timeIn || !timeOut) {
-                return ['Absent'];
-            }
-            const timeInDate = new Date('1970-01-01T' + timeIn);
-            const timeOutDate = new Date('1970-01-01T' + timeOut);
-            const timeThreshold = new Date('1970-01-01T08:10:00');
-            const overtimeThreshold = new Date('1970-01-01T18:00:00');
-            const earlyOutStart = new Date('1970-01-01T14:00:00');
-            const operationEndTime = new Date('1970-01-01T17:00:00');
+        const isHoliday = data.status === 'Holiday'; // Assuming the status is returned as 'Holiday' for holidays
+        const isDayOff = data.status === 'Day Off' || isSunday; // Mark Sunday as "Day Off"
 
-            if (timeInDate > timeThreshold) {
-                status.push('Late');
-            }
-            if (timeOutDate > overtimeThreshold) {
-                status.push('Overtime');
-            }
-            if (timeOutDate >= earlyOutStart && timeOutDate < operationEndTime) {
-                status.push('Early Out');
-            }
-            if (status.length === 0) {
-                status.push('Present');
-            }
-            return status;
-        }
+        if (isHoliday) {
+            document.getElementById('timeIn').textContent = 'Holiday';
+            document.getElementById('timeOut').textContent = 'Holiday';
+            document.getElementById('workStatus').textContent = data.holiday_name || 'Holiday';
 
-        function renderCalendar(month, year, attendanceRecords = {}) {
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const firstDay = new Date(year, month, 1).getDay();
-            const currentDate = new Date();
-            const currentDay = currentDate.getDate();
-            const currentMonth = currentDate.getMonth();
-            const currentYear = currentDate.getFullYear();
+            const statusElement = document.getElementById('workStatus');
+            statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+            statusElement.classList.add('text-danger');
+        } else if (isDayOff) {
+            document.getElementById('timeIn').textContent = 'Day Off';
+            document.getElementById('timeOut').textContent = 'Day Off';
+            document.getElementById('workStatus').textContent = 'Day Off';
 
-            let calendarHTML = '<div class="row text-center pt-3">';
-            for (let i = 0; i < firstDay; i++) {
-                calendarHTML += '<div class="col"></div>';
-            }
-            let dayCounter = 1;
-            for (let i = firstDay; i < 7; i++) {
-                const dayStatus = attendanceRecords[dayCounter];
-                const status = (i === 0) ? 'Day Off' :
-                               (dayStatus && dayStatus.status === 'Holiday') ? 'Holiday' :
-                               dayStatus || '';
-                const statusCount = Array.isArray(attendanceRecords[dayCounter]) ? attendanceRecords[dayCounter].length : 1;
-                const isFilteredDay = filteredDay && filteredDay.getDate() === dayCounter && filteredDay.getMonth() === month && filteredDay.getFullYear() === year;
-                const borderClass = isFilteredDay ? 'border border-2 border-light' : '';
-                const isToday = dayCounter === currentDay && month === currentMonth && year === currentYear;
-                const todayClass = isToday ? 'border border-2 border-light rounded-circle text-white d-flex align-items-center justify-content-center mx-auto' : '';
-                let statusClass = '';
-                if (statusCount > 1) {
-                    statusClass = 'text-dark';
-                } else {
-                    statusClass = status === 'Present' ? 'text-success' :
-                                  status === 'Absent' ? 'text-danger' :
-                                  status === 'Late' ? 'text-warning' :
-                                  status === 'Half-Day' ? 'text-success' :
-                                  status === 'Early Out' ? 'text-warning' :
-                                  status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' :
-                                  'text-default';
-                }
-                calendarHTML += `
-                    <div class="col p-1">
-                        <button class="btn text-light p-0 ${borderClass} ${todayClass}" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="showAttendanceDetails(${dayCounter})" style="width: 100%; height: 40px;">
-                            <span class="fw-bold ${statusClass}">
-                                ${dayCounter}
-                            </span>
-                        </button>
-                    </div>
-                `;
-                dayCounter++;
-            }
-            calendarHTML += '</div>';
-            while (dayCounter <= daysInMonth) {
-                calendarHTML += '<div class="row text-center pt-3">';
-                let dayOfWeek = 0;
-                for (let i = 0; i < 7 && dayCounter <= daysInMonth; i++) {
-                    const dayStatus = attendanceRecords[dayCounter];
-                    const status = (dayOfWeek === 0) ? 'Day Off' :
-                                   (dayStatus && dayStatus.status === 'Holiday') ? 'Holiday' :
-                                   dayStatus || '';
-                    const statusCount = Array.isArray(attendanceRecords[dayCounter]) ? attendanceRecords[dayCounter].length : 1;
-                    const isFilteredDay = filteredDay && filteredDay.getDate() === dayCounter && filteredDay.getMonth() === month && filteredDay.getFullYear() === year;
-                    const borderClass = isFilteredDay ? 'border border-2 border-light' : '';
-                    const isToday = dayCounter === currentDay && month === currentMonth && year === currentYear;
-                    const todayClass = isToday ? 'border border-2 border-light rounded-circle text-white d-flex align-items-center justify-content-center mx-auto' : '';
-                    let statusClass = '';
-                    if (statusCount > 1) {
-                        statusClass = 'text-dark';
-                    } else {
-                        statusClass = status === 'Present' ? 'text-success' :
-                                      status === 'Absent' ? 'text-danger' :
-                                      status === 'Late' ? 'text-warning' :
-                                      status === 'Half-Day' ? 'text-success' :
-                                      status === 'Early Out' ? 'text-warning' :
-                                      status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' :
-                                      'text-default';
-                    }
-                    calendarHTML += `
-                        <div class="col p-1">
-                            <button class="btn text-light p-0 ${borderClass} ${todayClass}" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="showAttendanceDetails(${dayCounter})" style="width: 100%; height: 40px;">
-                                <span class="fw-bold ${statusClass}">
-                                    ${dayCounter}
-                                </span>
-                            </button>
-                        </div>
-                    `;
-                    dayCounter++;
-                    dayOfWeek++;
-                }
-                if (dayOfWeek < 7) {
-                    for (let j = dayOfWeek; j < 7; j++) {
-                        calendarHTML += '<div class="col p-1"></div>';
-                    }
-                }
-                calendarHTML += '</div>';
-            }
-            document.getElementById('ATTENDANCEcalendar').innerHTML = calendarHTML;
-            document.getElementById('monthYearDisplay').textContent = `${monthNames[month]} ${year}`;
-            document.getElementById('todaysDateContent').textContent = `${monthNames[new Date().getMonth()]} ${new Date().getDate()}, ${new Date().getFullYear()}`;
-        }
+            const statusElement = document.getElementById('workStatus');
+            statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+            statusElement.classList.add('text-danger'); // Use danger color for "Day Off"
+        } else {
+            // Check if it's a future day
+            if (!isCurrentOrPastDay) {
+                document.getElementById('timeIn').textContent = 'No Data Found';
+                document.getElementById('timeOut').textContent = 'No Data Found';
+                document.getElementById('workStatus').textContent = 'No Data Found';
 
-        async function fetchAttendance(month, year) {
-            try {
-                const response = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?employee_id=${employeeId}&month=${month + 1}&year=${year}`);
-                const data = await response.json();
-                if (data.error) {
-                    console.error('Error fetching attendance data:', data.error);
-                    return;
-                }
-                renderCalendar(month, year, data);
-            } catch (error) {
-                console.error('Error fetching attendance data:', error);
-            }
-        }
-
-        async function showAttendanceDetails(day) {
-            const selectedDate = `${monthNames[currentMonth]} ${day}, ${currentYear}`;
-            document.getElementById('attendanceDate').textContent = selectedDate;
-            const currentDate = new Date();
-            const selectedDateObj = new Date(currentYear, currentMonth, day);
-            const isCurrentOrPastDay = selectedDateObj <= currentDate;
-            const isSunday = selectedDateObj.getDay() === 0;
-            const leaveResponse = await fetch(`/HR2/employee_db/supervisor/fetch_leave.php?employee_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
-            const leaveData = await leaveResponse.json();
-            if (leaveData.onLeave) {
-                document.getElementById('timeIn').textContent = `On Leave`;
-                document.getElementById('timeOut').textContent = `On Leave`;
-                document.getElementById('workStatus').textContent = leaveData.leaveType || 'On Leave';
                 const statusElement = document.getElementById('workStatus');
                 statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
-                statusElement.classList.add('text-danger');
+                statusElement.classList.add('text-muted'); // Use a muted color for "No Data Found"
+            }
+            // Check if it's the current day or a past day and there's no attendance data
+            else if (isCurrentOrPastDay && (!data.time_in && !data.time_out)) {
+                document.getElementById('timeIn').textContent = 'Absent';
+                document.getElementById('timeOut').textContent = 'Absent';
+                document.getElementById('workStatus').textContent = 'Absent';
+
+                const statusElement = document.getElementById('workStatus');
+                statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+                statusElement.classList.add('text-danger'); // Changed to danger color for "Absent"
             } else {
-                const attendanceResponse = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?employee_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
-                const data = await attendanceResponse.json();
-                if (data.error) {
-                    console.error(data.error);
-                    return;
-                }
-                const isHoliday = data.status === 'Holiday';
-                const isDayOff = data.status === 'Day Off' || isSunday;
-                if (isHoliday) {
-                    document.getElementById('timeIn').textContent = 'Holiday';
-                    document.getElementById('timeOut').textContent = 'Holiday';
-                    document.getElementById('workStatus').textContent = data.holiday_name || 'Holiday';
-                    const statusElement = document.getElementById('workStatus');
-                    statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
-                    statusElement.classList.add('text-danger');
-                } else if (isDayOff) {
-                    document.getElementById('timeIn').textContent = 'Day Off';
-                    document.getElementById('timeOut').textContent = 'Day Off';
-                    document.getElementById('workStatus').textContent = 'Day Off';
-                    const statusElement = document.getElementById('workStatus');
-                    statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
-                    statusElement.classList.add('text-danger');
-                } else {
-                    if (!isCurrentOrPastDay) {
-                        document.getElementById('timeIn').textContent = 'No Data Found';
-                        document.getElementById('timeOut').textContent = 'No Data Found';
-                        document.getElementById('workStatus').textContent = 'No Data Found';
-                        const statusElement = document.getElementById('workStatus');
-                        statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
-                        statusElement.classList.add('text-muted');
-                    } else if (isCurrentOrPastDay && (!data.time_in && !data.time_out)) {
-                        document.getElementById('timeIn').textContent = 'Absent';
-                        document.getElementById('timeOut').textContent = 'Absent';
-                        document.getElementById('workStatus').textContent = 'Absent';
-                        const statusElement = document.getElementById('workStatus');
-                        statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
-                        statusElement.classList.add('text-danger');
-                    } else {
-                        const timeInFormatted = data.time_in ? formatTimeWithAmPm(data.time_in) : 'Absent';
-                        const timeOutFormatted = data.time_out ? formatTimeWithAmPm(data.time_out) : 'Absent';
-                        const attendanceStatus = calculateAttendanceStatus(data.time_in, data.time_out, day, leaveData.onLeave);
-                        document.getElementById('timeIn').textContent = timeInFormatted;
-                        document.getElementById('timeOut').textContent = timeOutFormatted;
-                        const statusElement = document.getElementById('workStatus');
-                        statusElement.innerHTML = '';
-                        attendanceStatus.forEach((status, index) => {
-                            const span = document.createElement('span');
-                            span.textContent = status;
-                            switch (status) {
-                                case 'Late':
-                                    span.classList.add('text-warning');
-                                    break;
-                                case 'Overtime':
-                                    span.classList.add('text-primary');
-                                    break;
-                                case 'Present':
-                                    span.classList.add('text-success');
-                                    break;
-                                case 'Absent':
-                                    span.classList.add('text-danger');
-                                    break;
-                                case 'Day Off':
-                                    span.classList.add('text-danger');
-                                    break;
-                                case 'Half-Day':
-                                    span.classList.add('text-light');
-                                    break;
-                                case 'On Leave':
-                                    span.classList.add('text-danger');
-                                    break;
-                                case 'Early Out':
-                                    span.classList.add('text-warning');
-                                    break;
-                                default:
-                                    span.classList.add('text-default');
-                            }
-                            statusElement.appendChild(span);
-                            if (index < attendanceStatus.length - 1) {
-                                const separatorSpan = document.createElement('span');
-                                separatorSpan.textContent = ' & ';
-                                separatorSpan.classList.add('text-white');
-                                statusElement.appendChild(separatorSpan);
-                            }
-                        });
+                const timeInFormatted = data.time_in ? formatTimeWithAmPm(data.time_in) : 'Absent';
+                const timeOutFormatted = data.time_out ? formatTimeWithAmPm(data.time_out) : 'Absent';
+
+                // Pass onLeave status to calculateAttendanceStatus
+                const attendanceStatus = calculateAttendanceStatus(data.time_in, data.time_out, day, leaveData.onLeave);
+
+                // Display time-in and time-out
+                document.getElementById('timeIn').textContent = timeInFormatted;
+                document.getElementById('timeOut').textContent = timeOutFormatted;
+
+                // Display status with individual colors
+                const statusElement = document.getElementById('workStatus');
+                statusElement.innerHTML = ''; // Clear previous content
+
+                attendanceStatus.forEach((status, index) => {
+                    const span = document.createElement('span');
+                    span.textContent = status;
+
+                    // Assign color based on the status
+                    switch (status) {
+                        case 'Late':
+                            span.classList.add('text-warning'); // Yellow for Late
+                            break;
+                        case 'Overtime':
+                            span.classList.add('text-primary'); // Blue for Overtime
+                            break;
+                        case 'Present':
+                            span.classList.add('text-success'); // Green for Present
+                            break;
+                        case 'Absent':
+                            span.classList.add('text-danger'); // Red for Absent
+                            break;
+                        case 'Day Off':
+                            span.classList.add('text-danger'); // Light for Day Off
+                            break;
+                        case 'Half-Day':
+                            span.classList.add('text-light'); // Light for Half-Day
+                            break;
+                        case 'On Leave':
+                            span.classList.add('text-danger'); // Red for On Leave
+                            break;
+                        case 'Early Out':
+                            span.classList.add('text-warning'); // warning for Early Out
+                            break;
+                        default:
+                            span.classList.add('text-default'); // Default color
                     }
-                }
+
+                    statusElement.appendChild(span);
+
+                    // Add a separator (&) between statuses (except for the last one)
+                    if (index < attendanceStatus.length - 1) {
+                        const separatorSpan = document.createElement('span');
+                        separatorSpan.textContent = ' & ';
+                        separatorSpan.classList.add('text-white'); // White color for the separator
+                        statusElement.appendChild(separatorSpan);
+                    }
+                });
             }
         }
+    }
+}
 
-        document.getElementById('nextMonthBtn').addEventListener('click', function() {
-            currentMonth++;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            }
-            fetchAttendance(currentMonth, currentYear);
-        });
+// Function to calculate attendance status
+function calculateAttendanceStatus(timeIn, timeOut, day, onLeave = false) {
+    let status = [];
 
-        document.getElementById('prevMonthBtn').addEventListener('click', function() {
-            currentMonth--;
-            if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
-            }
-            fetchAttendance(currentMonth, currentYear);
-        });
+    // Check if the employee is on leave
+    if (onLeave) {
+        status.push('On Leave');
+        return status; // Return early if the employee is on leave
+    }
 
-        document.getElementById('dateFilter').addEventListener('change', function () {
-            const selectedDate = new Date(this.value);
-            currentMonth = selectedDate.getMonth();
-            currentYear = selectedDate.getFullYear();
-            filteredDay = selectedDate;
-            fetchAttendance(currentMonth, currentYear);
-        });
+    // Check if the day is a Sunday (0 for Sunday in JavaScript)
+    const date = new Date(currentYear, currentMonth, day);
+    if (date.getDay() === 0) {
+        return ['Day Off'];
+    }
 
-        fetchAttendance(currentMonth, currentYear);
+    // If there's no time_in or time_out, return "Absent"
+    if (!timeIn || !timeOut) {
+        return ['Absent'];
+    }
 
-        const evaluationData = {
-            avg_quality: <?php echo json_encode($evaluation['avg_quality'] ?? null); ?>,
-            avg_communication_skills: <?php echo json_encode($evaluation['avg_communication_skills'] ?? null); ?>,
-            avg_teamwork: <?php echo json_encode($evaluation['avg_teamwork'] ?? null); ?>,
-            avg_punctuality: <?php echo json_encode($evaluation['avg_punctuality'] ?? null); ?>,
-            avg_initiative: <?php echo json_encode($evaluation['avg_initiative'] ?? null); ?>,
-            totalAverage: <?php echo json_encode($totalAverage ?? null); ?>
-        };
+    // Convert timeIn and timeOut to Date objects for comparison
+    const timeThreshold = new Date('1970-01-01T08:10:00'); // Threshold time for Late check
+    const timeInDate = new Date('1970-01-01T' + timeIn);
+    const timeOutDate = new Date('1970-01-01T' + timeOut);
 
-        const ctx = document.getElementById('performanceRadarChart').getContext('2d');
+    // Check if employee is late
+    if (timeInDate > timeThreshold) {
+        status.push('Late');
+    }
 
-        function getDynamicFontSize() {
-            const screenWidth = window.innerWidth;
-            if (screenWidth < 576) {
-                return 10;
-            } else if (screenWidth < 768) {
-                return 12;
-            } else {
-                return 14;
-            }
-        }
+    // Check if there's overtime (Example: work beyond 6:00 PM)
+    const overtimeThreshold = new Date('1970-01-01T18:00:00');
+    if (timeOutDate > overtimeThreshold) {
+        status.push('Overtime');
+    }
 
-        const performanceRadarChart = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: ['Quality of Work', 'Communication Skills', 'Teamwork', 'Punctuality', 'Initiative'],
-                datasets: [
-                    {
-                        label: 'Category Ratings',
-                        data: [
-                            parseFloat(evaluationData.avg_quality || 0).toFixed(2),
-                            parseFloat(evaluationData.avg_communication_skills || 0).toFixed(2),
-                            parseFloat(evaluationData.avg_teamwork || 0).toFixed(2),
-                            parseFloat(evaluationData.avg_punctuality || 0).toFixed(2),
-                            parseFloat(evaluationData.avg_initiative || 0).toFixed(2)
-                        ],
-                        backgroundColor: 'rgba(26, 188, 156, 0.2)',
-                        borderColor: 'rgba(26, 188, 156, 1)',
-                        borderWidth: 2
-                    },
-                    {
-                        label: 'Overall Rating',
-                        data: [
-                            parseFloat(evaluationData.totalAverage || 0).toFixed(2),
-                            parseFloat(evaluationData.totalAverage || 0).toFixed(2),
-                            parseFloat(evaluationData.totalAverage || 0).toFixed(2),
-                            parseFloat(evaluationData.totalAverage || 0).toFixed(2),
-                            parseFloat(evaluationData.totalAverage || 0).toFixed(2)
-                        ],
-                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
-                        borderColor: 'rgba(52, 152, 219, 1)',
-                        borderWidth: 2
-                    }
-                ]
+    // Check if employee left early (1 to 3 hours before operation end time)
+    const operationEndTime = new Date('1970-01-01T17:00:00'); // Operation end time is 5:00 PM
+    const earlyOutStart = new Date('1970-01-01T14:00:00'); // Early out starts at 2:00 PM
+    if (timeOutDate >= earlyOutStart && timeOutDate < operationEndTime) {
+        status.push('Early Out');
+    }
+
+    // If no specific status, return "Present"
+    if (status.length === 0) {
+        status.push('Present');
+    }
+
+    return status; // Return an array of statuses
+}
+
+
+// Function to format time in HH:MM AM/PM format
+function formatTimeWithAmPm(time) {
+    const [hours, minutes] = time.split(':');
+    const ampm = parseInt(hours) >= 12 ? 'PM' : 'AM';
+    const formattedHours = (parseInt(hours) % 12) || 12;
+    return `${formattedHours}:${minutes} ${ampm}`;
+}
+
+
+// Event listeners for next and previous month buttons
+document.getElementById('nextMonthBtn').addEventListener('click', function() {
+    currentMonth++;
+    if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+    fetchAttendance(currentMonth, currentYear);
+});
+
+document.getElementById('prevMonthBtn').addEventListener('click', function() {
+    currentMonth--;
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    }
+    fetchAttendance(currentMonth, currentYear);
+});
+
+// Date filter functionality
+document.getElementById('dateFilter').addEventListener('change', function () {
+    const selectedDate = new Date(this.value); // Get the selected date
+    currentMonth = selectedDate.getMonth(); // Update the current month
+    currentYear = selectedDate.getFullYear(); // Update the current year
+    filteredDay = selectedDate; // Track the filtered day
+    fetchAttendance(currentMonth, currentYear); // Fetch and render the calendar for the selected month and year
+});
+
+// Fetch the initial calendar for the current month and year
+fetchAttendance(currentMonth, currentYear);
+
+
+ // PHP variables passed to JavaScript
+const evaluationData = {
+    avg_quality: <?php echo json_encode($evaluation['avg_quality'] ?? null); ?>,
+    avg_communication_skills: <?php echo json_encode($evaluation['avg_communication_skills'] ?? null); ?>,
+    avg_teamwork: <?php echo json_encode($evaluation['avg_teamwork'] ?? null); ?>,
+    avg_punctuality: <?php echo json_encode($evaluation['avg_punctuality'] ?? null); ?>,
+    avg_initiative: <?php echo json_encode($evaluation['avg_initiative'] ?? null); ?>,
+    totalAverage: <?php echo json_encode($totalAverage ?? null); ?>
+};
+
+const ctx = document.getElementById('performanceRadarChart').getContext('2d');
+
+// Function to calculate dynamic font size based on screen width
+function getDynamicFontSize() {
+    const screenWidth = window.innerWidth;
+    if (screenWidth < 576) { // Mobile
+        return 10;
+    } else if (screenWidth < 768) { // Tablet
+        return 12;
+    } else { // Desktop
+        return 14;
+    }
+}
+
+const performanceRadarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+        labels: ['Quality of Work', 'Communication Skills', 'Teamwork', 'Punctuality', 'Initiative'],
+        datasets: [
+            {
+                label: 'Category Ratings',
+                data: [
+                    parseFloat(evaluationData.avg_quality || 0).toFixed(2), // Fallback to 0 if invalid
+                    parseFloat(evaluationData.avg_communication_skills || 0).toFixed(2), // Fallback to 0 if invalid
+                    parseFloat(evaluationData.avg_teamwork || 0).toFixed(2), // Fallback to 0 if invalid
+                    parseFloat(evaluationData.avg_punctuality || 0).toFixed(2), // Fallback to 0 if invalid
+                    parseFloat(evaluationData.avg_initiative || 0).toFixed(2) // Fallback to 0 if invalid
+                ],
+                backgroundColor: 'rgba(26, 188, 156, 0.2)', // Light teal fill
+                borderColor: 'rgba(26, 188, 156, 1)', // Teal border
+                borderWidth: 2
             },
-            options: {
-                scales: {
-                    r: {
-                        angleLines: {
-                            display: true,
-                            color: 'rgba(255, 255, 255, 0.2)'
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 6,
-                        ticks: {
-                            stepSize: 1,
-                            display: false
-                        },
-                        pointLabels: {
-                            color: 'white',
-                            font: {
-                                size: getDynamicFontSize(),
-                                weight: 'bold',
-                                family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
-                            },
-                            padding: 15
-                        }
-                    }
+            {
+                label: 'Overall Rating',
+                data: [
+                    parseFloat(evaluationData.totalAverage || 0).toFixed(2), // Fallback to 0 if invalid
+                    parseFloat(evaluationData.totalAverage || 0).toFixed(2), // Fallback to 0 if invalid
+                    parseFloat(evaluationData.totalAverage || 0).toFixed(2), // Fallback to 0 if invalid
+                    parseFloat(evaluationData.totalAverage || 0).toFixed(2), // Fallback to 0 if invalid
+                    parseFloat(evaluationData.totalAverage || 0).toFixed(2) // Fallback to 0 if invalid
+                ],
+                backgroundColor: 'rgba(52, 152, 219, 0.2)', // Light blue fill
+                borderColor: 'rgba(52, 152, 219, 1)', // Blue border
+                borderWidth: 2
+            }
+        ]
+    },
+    options: {
+        scales: {
+            r: {
+                angleLines: {
+                    display: true,
+                    color: 'rgba(255, 255, 255, 0.2)' // Customize angle line color
                 },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            color: 'white',
-                            font: {
-                                family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
-                            }
-                        }
-                    },
-                    tooltip: {
-                        enabled: true,
-                        backgroundColor: 'rgba(22, 33, 62, 0.8)',
-                        titleFont: {
-                            family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-                            size: 14
-                        },
-                        bodyFont: {
-                            family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-                            size: 13
-                        },
-                        callbacks: {
-                            label: function (context) {
-                                return `${context.dataset.label}: ${parseFloat(context.raw || 0).toFixed(2)}`;
-                            }
-                        }
-                    },
-                    datalabels: {
-                        color: function (context) {
-                            return context.datasetIndex === 0 ? '#1abc9c' : '#3498db';
-                        },
-                        anchor: 'center',
-                        align: function (context) {
-                            return context.datasetIndex === 0 ? 'top' : 'bottom';
-                        },
-                        formatter: function (value) {
-                            return parseFloat(value || 0).toFixed(2);
-                        },
-                        font: {
-                            weight: 'bold',
-                            size: getDynamicFontSize(),
-                            family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
-                        }
-                    }
+                grid: {
+                    color: 'rgba(255, 255, 255, 0.1)' // Customize grid line color
                 },
-                responsive: true,
-                maintainAspectRatio: false
+                suggestedMin: 0,
+                suggestedMax: 6,
+                ticks: {
+                    stepSize: 1,
+                    display: false // Hide the tick labels (1 to 6)
+                },
+                pointLabels: {
+                    color: 'white', // Change label color
+                    font: {
+                        size: getDynamicFontSize(), // Dynamic font size
+                        weight: 'bold', // Make label text bold
+                        family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' // Change label font family
+                    },
+                    padding: 15
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                    color: 'white',
+                    font: {
+                        family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+                    }
+                }
             },
-            plugins: [ChartDataLabels]
-        });
+            tooltip: {
+                enabled: true, // Enable tooltips
+                backgroundColor: 'rgba(22, 33, 62, 0.8)',
+                titleFont: {
+                    family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                    size: 14
+                },
+                bodyFont: {
+                    family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                    size: 13
+                },
+                callbacks: {
+                    label: function (context) {
+                        // Format tooltip value to 2 decimal places
+                        return `${context.dataset.label}: ${parseFloat(context.raw || 0).toFixed(2)}`;
+                    }
+                }
+            },
+            datalabels: {
+                color: function (context) {
+                    // Use different colors for the two datasets
+                    return context.datasetIndex === 0 ? '#1abc9c' : '#3498db'; // Customize data label colors
+                },
+                anchor: 'center', // Position the label at the center of the point
+                align: function (context) {
+                    // Align first dataset labels to top, second dataset labels to bottom
+                    return context.datasetIndex === 0 ? 'top' : 'bottom';
+                },
+                formatter: function (value) {
+                    // Format data label value to 2 decimal places
+                    return parseFloat(value || 0).toFixed(2);
+                },
+                font: {
+                    weight: 'bold', // Make the text bold
+                    size: getDynamicFontSize(), // Use dynamic font size
+                    family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' // Set font family
+                }
+            }
+        },
+        responsive: true, // Enable responsiveness
+        maintainAspectRatio: false // Allow chart to adjust height and width independently
+    },
+    plugins: [ChartDataLabels] // Enable the datalabels plugin
+});
 
-        function updateChartOnResize() {
-            performanceRadarChart.options.plugins.datalabels.font.size = getDynamicFontSize();
-            performanceRadarChart.update();
-        }
+// Function to update the chart on window resize
+function updateChartOnResize() {
+    performanceRadarChart.options.plugins.datalabels.font.size = getDynamicFontSize(); // Update font size
+    performanceRadarChart.update(); // Update the chart to reflect new font sizes
+}
 
-        window.addEventListener('resize', updateChartOnResize);
+// Add event listener for window resize
+window.addEventListener('resize', updateChartOnResize);
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const today = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('todaysDateContent').textContent = today.toLocaleDateString('en-US', options);
-        });
-
-        function setCurrentTime() {
-            const currentTimeElement = document.getElementById('currentTime');
-            const currentDateElement = document.getElementById('currentDate');
-            const currentDate = new Date();
-            currentDate.setHours(currentDate.getHours() + 0);
-            const hours = currentDate.getHours();
-            const minutes = currentDate.getMinutes();
-            const seconds = currentDate.getSeconds();
-            const formattedHours = hours < 10 ? '0' + hours : hours;
-            const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-            const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
-            currentTimeElement.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-            currentDateElement.textContent = currentDate.toLocaleDateString();
-        }
-
-        setCurrentTime();
-        setInterval(setCurrentTime, 1000);
-    </script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+// Set today's date in the header
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('todaysDateContent').textContent = today.toLocaleDateString('en-US', options);
+});
+</script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../js/employee.js"></script>
 </body>

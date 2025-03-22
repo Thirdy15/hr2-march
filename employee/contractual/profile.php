@@ -1,12 +1,12 @@
 <?php
 session_start();
 include '../../db/db_conn.php';
+include '../../phpqrcode/qrlib.php'; // Include phpqrcode library
 
-if (!isset($_SESSION['emploeee_id']) || !isset($_SESSION['role']) || $_SESSION['ole'] !== 'Contractual') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Contractual') {
     header("Location: ../../login.php");
     exit();
 }
-
 
 if (isset($_SESSION['update_success'])) {
     echo '<script>alert("' . htmlspecialchars($_SESSION['update_success']) . '");</script>';
@@ -14,24 +14,24 @@ if (isset($_SESSION['update_success'])) {
 }
 
 // Fetch user info
-$employeeId = $_SESSION['emploeee_id'];
+$employeeId = $_SESSION['employee_id'];
 $sql = "SELECT 
-    e.emploeee_id, e.first_name, e.middle_name, e.last_name, e.birthdate, e.gender, e.email, e.created_at,
+    e.employee_id, e.first_name, e.middle_name, e.last_name, e.birthdate, e.gender, e.email, e.created_at,
     e.role, e.position, e.department, e.phone_number, e.address, e.pfp, 
     ua.login_time, 
     -- Fetch the last valid logout time
     (SELECT ua2.logout_time 
      FROM user_activity ua2 
-     WHERE ua2.user_id = e.e_id 
+     WHERE ua2.user_id = e.employee_id 
      AND ua2.logout_time IS NOT NULL 
      ORDER BY ua2.logout_time ASC 
      LIMIT 1) AS last_logout_time
 FROM 
     employee_register e
 LEFT JOIN 
-    user_activity ua ON e.emploeee_id = ua.user_id
+    user_activity ua ON e.employee_id = ua.user_id
 WHERE 
-    e.emploeee_id = ? 
+    e.employee_id = ? 
 ORDER BY 
     ua.login_time DESC 
 LIMIT 1";
@@ -39,7 +39,7 @@ LIMIT 1";
 
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $employeeId);
+$stmt->bind_param("i", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -51,6 +51,20 @@ if ($result->num_rows > 0) {
 
 $stmt->close();
 $conn->close();
+
+// Generate QR Code content
+$qrData = 'Employee ID: ' . $employeeInfo['employee_id'] . ' | Email: ' . $employeeInfo['email'];
+
+$qrCodeDir = '../qrcodes/';
+if (!is_dir($qrCodeDir)) {
+    mkdir($qrCodeDir, 0755, true); // Create the directory if it doesn't exist
+}
+
+// Path to store the generated QR Code image
+$qrImagePath = '../qrcodes/employee_' . $employeeId . '.png';
+
+// Generate QR Code and save it as a PNG image
+QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
 
 ?>
 
@@ -71,16 +85,12 @@ $conn->close();
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-    <body class="sb-nav-fixed bg-black">
-        <?php include 'navbar.php'; ?>
-        <div id="layoutSidenav">
-            <?php include 'sidebar.php'; ?>
-            <div id="layoutSidenav_content">
+
                 <main class="bg-black">
                     <div class="container-fluid position-relative px-4">
                         <div class="container-fluid" id="calendarContainer" 
-                        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1050; 
-                        width: 80%; height: 80%; display: none;">
+                            style="position: fixed; top: 9%; right: 0; z-index: 1050; 
+                            max-width: 100%; display: none;">
                             <div class="row">
                                 <div class="col-12 col-md-10 col-lg-8 mx-auto">
                                     <div id="calendar" class="p-2"></div>
@@ -98,45 +108,78 @@ $conn->close();
                                     <div class="card-body bg-dark">
                                         <div class="row">
                                             <div class="col-xl-2">
-                                                <div class="d-flex justify-content-center align-items-center">
-                                                    <img src="<?php echo (!empty($employeeInfo['pfp']) && $employeeInfo['pfp'] !== 'defaultpfp.png') 
-                                                        ? htmlspecialchars($employeeInfo['pfp']) 
-                                                        : '../../img/defaultpfp.jpg'; ?>" 
-                                                        class="rounded-circle border border-light img-fluid" 
-                                                        style="max-width: 100%; height: auto; object-fit: cover; cursor: pointer;" 
-                                                        alt="Profile Picture"id="profilePic" data-bs-toggle="modal" data-bs-target="#profilePicModal" />  
+                                                <div class="d-flex justify-content-center">
+                                                    <?php
+                                                    // Check if a custom profile picture exists
+                                                    if (!empty($employeeInfo['pfp']) && $employeeInfo['pfp'] !== 'defaultpfp.png') {
+                                                        // Display the custom profile picture
+                                                        echo '<img src="' . htmlspecialchars($employeeInfo['pfp']) . '" 
+                                                            class="rounded-circle border border-light img-fluid" 
+                                                            style="max-width: 230px; max-height: 230px; min-width: 230px; min-height: 230px; object-fit: cover; cursor: pointer;" 
+                                                            alt="Profile Picture" 
+                                                            id="profilePic" data-bs-toggle="modal" data-bs-target="#profilePicModal" />';
+                                                    } else {
+                                                        // Generate initials from the first name and last name
+                                                        $firstName = $employeeInfo['first_name'] ?? '';
+                                                        $lastName = $employeeInfo['last_name'] ?? '';
+                                                        $initials = strtoupper(substr($firstName, 0, 1) . substr($lastName, 0, 1));
+
+                                                        // Display the initials in a circular container
+                                                        echo '<div class="rounded-circle border border-light d-flex justify-content-center align-items-center img-fluid" 
+                                                            style="max-width: 230px; max-height: 230px; min-width: 230px; min-height: 230px; background-color:rgba(16, 17, 18); color: white; font-size: 48px; font-weight: bold; cursor: pointer; object-fit: cover;" 
+                                                            id="profilePic" data-bs-toggle="modal" data-bs-target="#profilePicModal">' . $initials . '</div>';
+                                                    }
+                                                    ?>
                                                 </div>
- 
                                                 <div class="modal fade" id="profilePicModal" tabindex="-1" aria-labelledby="profilePicModalLabel" aria-hidden="true">
                                                     <div class="modal-dialog modal-dialog-centered"> <!-- Set the modal size using 'modal-lg' for large -->
                                                         <div class="modal-content bg-dark text-light" style="width: 600px; height: 500px;">
                                                             <div class="modal-header">
-                                                                <h5 class="modal-title" id="profilePicModalLabel"><?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middl_ename'] . ' ' . $employeeInfo['last_name']); ?></h5>
+                                                                <h5 class="modal-title" id="profilePicModalLabel">
+                                                                    <?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']); ?>
+                                                                </h5>
                                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                             </div>
-                                                            <div class="modal-body">
-                                                                <img src="<?php echo (!empty($employeeInfo['pfp']) && $employeeInfo['pfp'] !== 'defaultpfp.png') 
-                                                                    ? htmlspecialchars($employeeInfo['pfp']) 
-                                                                    : '../../img/defaultpfp.jpg'; ?>" 
-                                                                    class="img-fluid rounded" style="width: 500px; height: 400px;" alt="Profile Picture" /> <!-- img-fluid to make it responsive -->
+                                                            <div class="modal-body d-flex justify-content-center align-items-center">
+                                                                <?php
+                                                                // Check if a custom profile picture exists
+                                                                if (!empty($employeeInfo['pfp']) && $employeeInfo['pfp'] !== 'defaultpfp.png') {
+                                                                    // Display the custom profile picture
+                                                                    echo '<img src="' . htmlspecialchars($employeeInfo['pfp']) . '" 
+                                                                        class="img-fluid rounded" 
+                                                                        style="width: 500px; height: 400px; object-fit: cover;" 
+                                                                        alt="Profile Picture" />';
+                                                                } else {
+                                                                    // Generate initials from the first name and last name
+                                                                    $firstName = $employeeInfo['first_name'] ?? '';
+                                                                    $lastName = $employeeInfo['last_name'] ?? '';
+                                                                    $initials = strtoupper(substr($firstName, 0, 1) . substr($lastName, 0, 1));
+
+                                                                    // Display the initials in a circular container
+                                                                    echo '<div class="rounded-circle d-flex justify-content-center align-items-center" 
+                                                                        style="width: 400px; height: 400px; background-color: rgba(16, 17, 18); color: white; font-size: 120px; font-weight: bold;">' . $initials . '</div>';
+                                                                }
+                                                                ?>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="d-flex justify-content-center align-items-center mt-4 mb-3">
-                                                    <button class="btn btn-light text-center" type="button" id="editPictureDropdown" 
-                                                        data-bs-toggle="dropdown" aria-expanded="false"> Edit Profile
-                                                        <i class="fas fa-edit"></i>
+                                                    <button class="btn btn-primary text-center w-50" type="button" title="Profile Settings" id="editPictureDropdown" 
+                                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="me-2 fs-5 fas fa-user-cog"></i>
+                                                        Settings
                                                     </button>
                                                     <div class="dropdown">
                                                         <ul class="dropdown-menu" aria-labelledby="editPictureDropdown">
                                                             <li>
-                                                                <a class="dropdown-item fw-bold" href="javascript:void(0);" id="changePictureOption">Change Profile Picture</a>
+                                                                <a class="dropdown-item fw-bold text-start" title="Change Profile" href="javascript:void(0);" id="changePictureOption"> <i class="me-2 fs-5 fas fa-user-edit"></i>Change Profile</a>
                                                             </li>
                                                             <hr>
                                                             <li>
-                                                                <button class="dropdown-item fw-bold text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteProfilePictureModal">
-                                                                    Delete Profile Picture
+                                                                <button class="dropdown-item fw-bold text-start text-danger" title="Delete Profile" type="button" data-bs-toggle="modal" data-bs-target="#deleteProfilePictureModal">
+                                                                    <i class="me-2 fs-5 fa fa-trash"></i>
+                                                                    Delete
                                                                 </button>
                                                             </li>
                                                         </ul>
@@ -144,47 +187,63 @@ $conn->close();
                                                 </div>
                                             </div>
                                             <div class="col-xl-10 mb-4">
-                                                <div class="">
+                                               <div class="">
+                                                    <!-- Your buttons -->
                                                     <div class="d-flex justify-content-start">
-                                                        <a href="../../employee/supervisor/change_pass.php" class="btn btn-primary"> Change password </a>
+                                                        <a href="../admin/change_pass.php" class="btn btn-primary text-light loading" role="status">Change password</a>
+                                                    </div>                              
+                                                </div>
+                                                <div class="mt-3">
+                                                    <div class="form-group row">
+                                                        <div class="col-sm-4 mb-3 position-relative">
+                                                            <label class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Name</label>
+                                                            <input class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" name="fname" 
+                                                                value="<?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']); ?>" readonly>
+                                                        </div>
+
+                                                        <div class="col-sm-4 position-relative">
+                                                            <label class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">ID No.</label>
+                                                            <input class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" name="id" 
+                                                                value="<?php echo htmlspecialchars($employeeInfo['employee_id']); ?>" readonly>
+                                                        </div>
+
+
+                                                        <div class="col-sm-4 position-relative">
+                                                            <label class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Gender</label>
+                                                            <input class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" name="gender" value="<?php echo htmlspecialchars($employeeInfo['gender']); ?>" readonly>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div class="mt-3">
                                                     <div class="form-group row">
-                                                        <div class="col-sm-4 bg-dark form-floating mb-3">
-                                                            <input class="form-control fw-bold" name="fname" value="<?php echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']); ?>" readonly>
-                                                            <label class="fw-bold">Name:</label>
+                                                        <div class="col-sm-6 position-relative mb-3">
+                                                            <label class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Role</label>
+                                                            <input class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" name="position" value="<?php echo htmlspecialchars($employeeInfo['role']); ?>" readonly>
                                                         </div>
 
-                                                        <div class="col-sm-4 bg-dark form-floating">
-                                                            <input class="form-control fw-bold" name="id" value="<?php echo htmlspecialchars($employeeInfo['emploeee_id']); ?>" readonly>
-                                                            <label class="fw-bold">ID No.:</label>
-                                                        </div>
-
-                                                        <div class="col-sm-4 bg-dark form-floating">
-                                                            <input class="form-control fw-bold" name="id" value="<?php echo htmlspecialchars($employeeInfo['gender']); ?>" readonly>
-                                                            <label class="fw-bold">Gender:</label>
+                                                        <div class="col-sm-6 position-relative">
+                                                            <label class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Department</label>
+                                                            <input class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" name="department" value="<?php echo htmlspecialchars($employeeInfo['department']); ?>" readonly>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="mt-3">
                                                     <div class="form-group row">
-                                                        <div class="col-sm-6 bg-dark form-floating mb-3">
-                                                            <input class="form-control fw-bold" name="position" value="<?php echo htmlspecialchars($employeeInfo['position']); ?>" readonly>
-                                                            <label class="fw-bold">Role:</label>
-                                                        </div>
-
-                                                        <div class="col-sm-6 bg-dark form-floating">
-                                                            <input class="form-control fw-bold" name="department" value="<?php echo htmlspecialchars($employeeInfo['department']); ?>" readonly>
-                                                            <label class="fw-bold">Department:</label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="mt-3">
-                                                    <div class="form-group row">
-                                                        <div class="col-sm-12 bg-dark form-floating mb-3">
-                                                            <input class="form-control fw-bold" name="email" value="<?php echo htmlspecialchars($employeeInfo['email']); ?>" readonly>
-                                                            <label class="fw-bold">Email:</label>
+                                                        <div class="col-sm-12 position-relative mb-3">
+                                                            <label class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Email</label>
+                                                            <input class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" name="email" value="<?php echo htmlspecialchars($employeeInfo['email']); ?>" readonly>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -192,41 +251,59 @@ $conn->close();
                                             <div class="card-header bg-dark text-light">
                                                 <hr>
                                                 <h3 class="card-title text-center">Edit Information</h3>
+                                                <hr>
                                             </div>
                                             <div class="card-body bg-dark">
-                                                <form id="infoForm" action="../../employee_db/supervisor/update_profile.php" method="post">
+                                                <form id="infoForm" action="/HR2/employee_db//update_profile.php" method="post">
+                                                    <div class="mb-4 text-info">
+                                                        <h4>Personal Details</h4>
+                                                    </div>
                                                     <div class="row mb-3">
-                                                        <div class="col-sm-4 bg-dark form-floating mb-3">
-                                                            <input type="text" class="form-control fw-bold" id="inputfName" name="firstname" value="<?php echo htmlspecialchars($employeeInfo['first_name']); ?>" readonly required>
-                                                            <label for="inputfName" class="fw-bold">First Name:</label>
+                                                        <div class="col-sm-4 bg-dark position-relative mb-3">
+                                                            <label for="inputfName" class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">First Name</label>
+                                                            <input type="text" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="inputfName" name="first_name" value="<?php echo htmlspecialchars($employeeInfo['first_name']); ?>" readonly required>
                                                         </div>
-                                                        <div class="col-sm-4 bg-dark form-floating mb-3">
-                                                            <input type="text" class="form-control fw-bold" id="inputmName" name="middlename" value="<?php echo htmlspecialchars($employeeInfo['middle_name']); ?>" readonly required>
-                                                            <label for="inputmName" class="fw-bold">Middle Name:</label>
+                                                        <div class="col-sm-4 bg-dark position-relative mb-3">
+                                                            <label for="inputmName" class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Middle Name</label>
+                                                            <input type="text" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="inputmName" name="middlename" value="<?php echo htmlspecialchars($employeeInfo['middle_name']); ?>" readonly required>
                                                         </div>
-                                                        <div class="col-sm-4 bg-dark form-floating">
-                                                            <input type="text" class="form-control fw-bold" id="inputlName" name="lastname" value="<?php echo htmlspecialchars($employeeInfo['last_name']); ?>" readonly required>
-                                                            <label for="inputlName" class="fw-bold">Last Name:</label>
+                                                        <div class="col-sm-4 bg-dark position-relative">
+                                                            <label for="inputlName" class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Last Name</label>
+                                                            <input type="text" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="inputlName" name="last_name" value="<?php echo htmlspecialchars($employeeInfo['last_name']); ?>" readonly required>
                                                         </div>
                                                     </div>
                                                     <div class="row mb-3">
-                                                        <div class="col-sm-6 bg-dark form-floating mb-3">
-                                                            <input type="date" class="form-control fw-bold" id="inputbirth" name="birthdate" value="<?php echo htmlspecialchars($employeeInfo['birthdate']); ?>" readonly required>
-                                                            <label for="inputbirth" class="fw-bold">Birthdate:</label>
+                                                        <div class="col-sm-6 bg-dark position-relative mb-3">
+                                                            <label for="inputbirth" class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Birthdate</label>
+                                                            <input type="date" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="inputbirth" name="birthdate" value="<?php echo htmlspecialchars($employeeInfo['birthdate']); ?>" readonly required>
                                                         </div>
-                                                        <div class="col-sm-6 bg-dark form-floating">
-                                                            <input type="email" class="form-control fw-bold" id="inputEmail" name="email" value="<?php echo htmlspecialchars($employeeInfo['email']); ?>" readonly required>
-                                                            <label for="inputEmail" class="fw-bold">Email Address:</label>
+                                                        <div class="col-sm-6 bg-dark position-relative">
+                                                            <label for="inputEmail" class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Email Address</label>
+                                                            <input type="email" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="inputEmail" name="email" value="<?php echo htmlspecialchars($employeeInfo['email']); ?>" readonly required>
                                                         </div>
                                                     </div>
                                                     <div class="row mb-3">
-                                                        <div class="col-sm-6 bg-dark form-floating mb-3">
-                                                            <input type="number" class="form-control fw-bold" id="inputEmail" id="inputPhone" name="phone_number" value="<?php echo htmlspecialchars($employeeInfo['phone_number']); ?>" readonly required>
-                                                            <label for="inputPhone" class="fw-bold">Phone Number:</label>
+                                                        <div class="col-sm-6 bg-dark position-relative mb-3">
+                                                            <label for="inputPhone" class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Phone Number</label>
+                                                            <input type="number" class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="inputPhone" id="inputPhone" name="phone_number" value="<?php echo htmlspecialchars($employeeInfo['phone_number']); ?>" readonly required>
                                                         </div>
-                                                        <div class="col-sm-6 bg-dark form-floating">
-                                                            <input class="form-control fw-bold" id="inputAddress" name="address" value="<?php echo htmlspecialchars($employeeInfo['address']); ?>" readonly required>
-                                                            <label for="inputAddress" class="fw-bold">Address:</label>
+                                                        <div class="col-sm-6 bg-dark position-relative">
+                                                            <label for="inputAddress" class="fw-bold position-absolute text-light" 
+                                                                style="top: -10px; left: 27px; background-color: #212529; padding: 0 5px;">Address</label>
+                                                            <input class="form-control fw-bold bg-dark border border-2 border-secondary text-light" 
+                                                                style="height: 60px; padding-top: 15px; padding-bottom: 15px;" id="inputAddress" name="address" value="<?php echo htmlspecialchars($employeeInfo['address']); ?>" readonly required>
                                                         </div>
                                                     </div>
                                                     <div class="d-flex justify-content-end">
@@ -236,7 +313,7 @@ $conn->close();
                                                 </form>
                                             </div>
                                         </div>
-                                        <form action="../../employee_db/supervisor/update_employee_pfp.php" method="post" enctype="multipart/form-data" id="profilePictureForm" style="display:none;">
+                                        <form action="/HR2/employee_db//update_employee_pfp.php" method="post" enctype="multipart/form-data" id="profilePictureForm" style="display:none;">
                                             <input type="file" id="profilePictureInput" name="profile_picture" accept="image/*" onchange="showConfirmationModal();">
                                         </form>
                                         <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
@@ -328,8 +405,8 @@ $conn->close();
                                     <p>Are you sure you want to delete your profile picture?</p>
                                 </div>
                                 <div class="modal-footer border-top border-secondary">
-                                    <form action="../../employee_db/supervisor/delete_employee_pfp.php" method="post">
-                                        <input type="hidden" name="employeeId" value="<?php echo $employeeInfo['emploeee_id']; ?>">
+                                    <form action="/HR2/employee_db//delete_employee_pfp.php" method="post">
+                                        <input type="hidden" name="employeeId" value="<?php echo $employeeInfo['employee_id']; ?>">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                         <button type="submit" class="btn btn-danger">Delete</button>
                                     </form>
@@ -353,152 +430,11 @@ $conn->close();
                                 </div>
                             </div>
                         </div>
-               <?php include 'footer.php'; ?>
+                    </div>
+                <?php include 'footer.php'; ?>
             </div>
         </div>
-        <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content bg-transparent border-0">
-                    <div class="modal-body d-flex flex-column align-items-center justify-content-center">
-                            <!-- Bouncing coin spinner -->
-                            <div class="coin-spinner"></div>
-                            <div class="mt-3 text-light fw-bold">Please wait...</div>
-                        </div>
-                    </div>
-                </div>
-           </div>
         <script>
-              document.addEventListener('DOMContentLoaded', function () {
-                const buttons = document.querySelectorAll('.loading');
-                const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-
-                // Loop through each button and add a click event listener
-                buttons.forEach(button => {
-                    button.addEventListener('click', function (event) {
-                        // Show the loading modal
-                        loadingModal.show();
-
-                        // Disable the button to prevent multiple clicks
-                        this.classList.add('disabled');
-
-                        // Handle form submission buttons
-                        if (this.closest('form')) {
-                            event.preventDefault(); // Prevent the default form submit
-
-                            // Submit the form after a short delay
-                            setTimeout(() => {
-                                this.closest('form').submit();
-                            }, 1500);
-                        }
-                        // Handle links
-                        else if (this.tagName.toLowerCase() === 'a') {
-                            event.preventDefault(); // Prevent the default link behavior
-
-                            // Redirect after a short delay
-                            setTimeout(() => {
-                                window.location.href = this.href;
-                            }, 1500);
-                        }
-                    });
-                });
-
-                // Hide the loading modal when navigating back and enable buttons again
-                window.addEventListener('pageshow', function (event) {
-                    if (event.persisted) { // Check if the page was loaded from cache (back button)
-                        loadingModal.hide();
-
-                        // Re-enable all buttons when coming back
-                        buttons.forEach(button => {
-                            button.classList.remove('disabled');
-                        });
-                        
-                    }
-                });
-            });
-            //CALENDAR 
-            let calendar;
-                function toggleCalendar() {
-                    const calendarContainer = document.getElementById('calendarContainer');
-                        if (calendarContainer.style.display === 'none' || calendarContainer.style.display === '') {
-                            calendarContainer.style.display = 'block';
-                            if (!calendar) {
-                                initializeCalendar();
-                            }
-                        } else {
-                            calendarContainer.style.display = 'none';
-                        }
-                }
-
-                function initializeCalendar() {
-                    const calendarEl = document.getElementById('calendar');
-                        calendar = new FullCalendar.Calendar(calendarEl, {
-                            initialView: 'dayGridMonth',
-                            headerToolbar: {
-                            left: 'prev,next today',
-                            center: 'title',
-                            right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                            },
-                            height: 440,  
-                            events: {
-                            url: '../../db/holiday.php',  
-                            method: 'GET',
-                            failure: function() {
-                            alert('There was an error fetching events!');
-                            }
-                            }
-                        });
-
-                        calendar.render();
-                }
-
-                document.addEventListener('DOMContentLoaded', function () {
-                    const currentDateElement = document.getElementById('currentDate');
-                    const currentDate = new Date().toLocaleDateString(); 
-                    currentDateElement.textContent = currentDate; 
-                });
-
-                document.addEventListener('click', function(event) {
-                    const calendarContainer = document.getElementById('calendarContainer');
-                    const calendarButton = document.querySelector('button[onclick="toggleCalendar()"]');
-
-                        if (!calendarContainer.contains(event.target) && !calendarButton.contains(event.target)) {
-                            calendarContainer.style.display = 'none';
-                            }
-                });
-                //CALENDAR END
-
-                //TIME 
-                function setCurrentTime() {
-                const currentTimeElement = document.getElementById('currentTime');
-                const currentDateElement = document.getElementById('currentDate');
-
-                const currentDate = new Date();
-
-                // Convert to 12-hour format with AM/PM
-                let hours = currentDate.getHours();
-                const minutes = currentDate.getMinutes();
-                const seconds = currentDate.getSeconds();
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-
-                hours = hours % 12;
-                hours = hours ? hours : 12; // If hour is 0, set to 12
-
-                const formattedHours = hours < 10 ? '0' + hours : hours;
-                const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-                const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
-
-                currentTimeElement.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds} ${ampm}`;
-
-                // Format the date in text form (e.g., "January 12, 2025")
-                const options = { year: 'numeric', month: 'long', day: 'numeric' };
-                currentDateElement.textContent = currentDate.toLocaleDateString('en-US', options);
-            }
-
-            setCurrentTime();
-            setInterval(setCurrentTime, 1000);
-                //TIME END
-
-
                 document.addEventListener('DOMContentLoaded', function() {
                 // Check if there is a message to show
                 <?php if (isset($message)) : ?>

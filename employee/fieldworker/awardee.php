@@ -1076,7 +1076,7 @@ function getComments($conn, $employeeId) {
 <body class="sb-nav-fixed bg-black">
     <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
-        <?php include 'sidebar.php'; ?>
+    
     <div id="layoutSidenav_content">
         <main class="container-fluid position-relative bg-black">
             <div class="container text-light">

@@ -293,10 +293,6 @@ $conn->close();
     </style>
 </head>
 <body class="sb-nav-fixed">
-    <?php include 'navbar.php'; ?>
-    <div id="layoutSidenav">
-        <?php include 'sidebar.php'; ?>
-        <div id="layoutSidenav_content">
             <main class="container-fluid position-relative px-4">
                 <div class="container" id="calendarContainer" 
                     style="position: fixed; top: 9%; right: 0; z-index: 1050; 
