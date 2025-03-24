@@ -31,7 +31,7 @@ $timeFrame = isset($_GET['timeFrame']) ? $_GET['timeFrame'] : '';
 
 // Adjust SQL query to always show the latest history at the top
 $sql = "
-    SELECT lr.*, e.first_name, e.last_name, s.first_name AS supervisor_first_name, s.lastname AS supervisor_last_name
+    SELECT lr.*, e.first_name, e.last_name, s.first_name AS supervisor_first_name, s.last_name AS supervisor_last_name
     FROM leave_requests lr
     JOIN employee_register e ON lr.employee_id = e.employee_id
     LEFT JOIN employee_register s ON lr.supervisor_id = s.employee_id
@@ -67,7 +67,7 @@ if (!$stmt) {
 }
 
 $bindParams = [$employeeId];
-$bindTypes = "s";
+$bindTypes = "i";
 
 if ($searchTerm) {
     $searchTerm = "%$searchTerm%";
@@ -119,14 +119,13 @@ function calculateLeaveDays($start_date, $end_date) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leave History</title>
-     <link href='../../css/styles.css' rel='stylesheet' />
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            background-color:rgb(34, 33, 33);
+            background-color: #000000;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
@@ -492,7 +491,7 @@ function calculateLeaveDays($start_date, $end_date) {
                     <p class="mb-2"><strong>ID:</strong> <?php echo htmlspecialchars($employeeInfo['employee_id']); ?></p>
                 </div>
                 <div class="col-md-6">
-                    <p class="mb-2"><strong>Position:</strong> <?php echo htmlspecialchars($employeeInfo['position']); ?></p>
+                    <p class="mb-2"><strong>Role:</strong> <?php echo htmlspecialchars($employeeInfo['role']); ?></p>
                     <p class="mb-2"><strong>Department:</strong> <?php echo htmlspecialchars($employeeInfo['department']); ?></p>
                 </div>
             </div>
@@ -629,7 +628,7 @@ function calculateLeaveDays($start_date, $end_date) {
                                 </td>
                                 <td>
                                     <div class="d-flex action-buttons">
-                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-id="<?php echo $row['id']; ?>" <?php if ($status !== 'Pending') echo 'disabled'; ?>>
+                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-id="<?php echo $row['leave_id']; ?>" <?php if ($status !== 'Supervisor Approved') echo 'disabled'; ?>>
                                             <i class="fas fa-times-circle"></i> Cancel
                                         </button>
                                     </div>
@@ -724,3 +723,5 @@ function calculateLeaveDays($start_date, $end_date) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+

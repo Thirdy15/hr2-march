@@ -713,16 +713,51 @@ function getComments($conn, $employeeId) {
             }
         }
 
-        @media (max-width: 768px) {
-            .metrics-container {
-                grid-template-columns: 1fr;
-            }
+       /* General adjustments for smaller screens */
+@media (max-width: 1200px) {
+    .metrics-container {
+        grid-template-columns: 1fr;
+    }
 
-            .employee-card {
-                margin: 1rem;
-                padding: 1rem;
-            }
-        }
+    .employee-card {
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+
+    .metric-box {
+        margin-top: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .metrics-container {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-card {
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+
+    .metric-box {
+        margin-top: 1rem;
+    }
+
+    .profile-section {
+        margin-top: 1rem;
+    }
+
+    .comment-reaction-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .navigation-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
 
         .progress-ring {
             position: absolute;
@@ -1021,6 +1056,9 @@ function getComments($conn, $employeeId) {
         .empty-comments p {
             font-size: 16px;
         }
+
+
+        
     </style>
 </head>
 <body class="sb-nav-fixed bg-black">
@@ -1069,9 +1107,9 @@ function getComments($conn, $employeeId) {
                 </div>
             </div>
             <div class='navigation-buttons'>
-                            <button class='btn btn-primary' onclick='showPreviousEmployee(1)'>Previous</button>
-                            <button class='btn btn-primary' onclick='showNextEmployee(1)'>Next</button>
-                        </div>
+                    <button class='btn btn-primary' onclick='showPreviousEmployee(1)' style='font-size: 20px;'><</button>
+                    <button class='btn btn-primary' onclick='showNextEmployee(1)' style='font-size: 20px;'>></button>
+                </div>
         <?php include 'footer.php'; ?>
     </div>
     <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
@@ -1313,9 +1351,7 @@ function selectReaction(reaction, employeeId) {
 
             // Send a notification after saving the reaction
             sendNotification(employeeId, reaction);
-        } else {
-            alert('Failed to save reaction');
-        }
+        } 
     })
     .catch(error => console.error('Error:', error));
 }
@@ -1371,8 +1407,8 @@ function addNotificationToDropdown(notification) {
     notificationCount.textContent = currentCount + 1;
 }
 
-    // Function to open the comment modal with animation
-    function openCommentModal(employeeId) {
+     // Function to open the comment modal with animation
+     function openCommentModal(employeeId) {
         const modal = document.getElementById('commentModal');
         modal.style.display = 'flex';
         modal.classList.add('show');
@@ -1393,105 +1429,9 @@ function addNotificationToDropdown(notification) {
         }, 300);
     }
 
-    // Function to close the reaction dropdown
-    function closeReactions(employeeId) {
-        const menu = document.getElementById('reaction-menu-' + employeeId);
-        menu.classList.remove('show');
-    }
 
-   // Function to fetch and display comments with time ago format
-    function fetchComments(employeeId) {
-        fetch('fetch_comments.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ employee_id: employeeId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            const commentList = document.querySelector('.modal-body .comment-list');
-            commentList.innerHTML = ''; // Clear existing comments
-
-            if (data.comments && data.comments.length > 0) {
-                data.comments.forEach(comment => {
-                    // Calculate time ago using the getTimeAgo function
-                    const timeAgo = getTimeAgo(comment.created_at);
-
-                    // Create comment element
-                    const commentElement = document.createElement('div');
-                    commentElement.classList.add('comment');
-
-                    commentElement.innerHTML = `
-                        <div class="comment-header">
-                            <span class="comment-author">${comment.username || 'Anonymous'}</span>
-                            <span class="comment-time">${timeAgo}</span>
-                        </div>
-                        <div class="comment-content">${comment.comment}</div>
-                        <div class="comment-actions">
-                            <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
-                            <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
-                        </div>
-                    `;
-
-                    commentList.appendChild(commentElement);
-                });
-
-                // Update the comment count
-                const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
-                if (commentCountElement) {
-                    commentCountElement.textContent = data.total_comments;
-                }
-            } else {
-                // Show empty state
-                const emptyState = document.createElement('div');
-                emptyState.classList.add('empty-comments');
-                emptyState.innerHTML = `
-                    <i class="bi bi-chat-square-text"></i>
-                    <p>No comments yet. Be the first to comment!</p>
-                `;
-                commentList.appendChild(emptyState);
-
-                // Update the comment count to 0
-                const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
-                if (commentCountElement) {
-                    commentCountElement.textContent = 0;
-                }
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
-
-    // Function to calculate time ago
-    function getTimeAgo(date) {
-        const now = new Date();
-        const past = new Date(date); // Ensure 'date' is a Date object
-        const seconds = Math.floor((now - past) / 1000);
-
-        let interval = Math.floor(seconds / 31536000);
-        if (interval >= 1) return interval === 1 ? '1 year ago' : interval + ' years ago';
-
-        interval = Math.floor(seconds / 2592000);
-        if (interval >= 1) return interval === 1 ? '1 month ago' : interval + ' months ago';
-
-        interval = Math.floor(seconds / 86400);
-        if (interval >= 1) return interval === 1 ? '1 day ago' : interval + ' days ago';
-
-        interval = Math.floor(seconds / 3600);
-        if (interval >= 1) return interval === 1 ? '1 hour ago' : interval + ' hours ago';
-
-        interval = Math.floor(seconds / 60);
-        if (interval >= 1) return interval === 1 ? '1 minute ago' : interval + ' minutes ago';
-
-        return seconds < 10 ? 'just now' : seconds + ' seconds ago';
-    }
-
-    // Example usage
-    console.log(getTimeAgo("2024-02-22 14:30:00")); // Output: "X hours ago" or similar
-    console.log(getTimeAgo(new Date() - 5000)); // Output: "5 seconds ago"
-
-    // Function to post a comment
-    function postComment(event, input) {
+   // Function to post a comment
+   function postComment(event, input) {
         if ((event.key === 'Enter' || event.type === 'click') && input.value.trim() !== '') {
             const employeeId = document.getElementById('commentModal').getAttribute('data-employee-id');
             const comment = input.value.trim();
@@ -1544,9 +1484,108 @@ function addNotificationToDropdown(notification) {
                     alert('Failed to save comment');
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to save comment');
+            });
         }
     }
+
+   // Function to calculate time ago
+function getTimeAgo(dateString) {
+    const now = new Date();
+    const past = new Date(dateString); // Parse the ISO 8601 date string
+    const seconds = Math.floor((now - past) / 1000);
+
+    let interval = Math.floor(seconds / 31536000);
+    if (interval >= 1) return interval === 1 ? '1 year ago' : interval + ' years ago';
+
+    interval = Math.floor(seconds / 2592000);
+    if (interval >= 1) return interval === 1 ? '1 month ago' : interval + ' months ago';
+
+    interval = Math.floor(seconds / 86400);
+    if (interval >= 1) return interval === 1 ? '1 day ago' : interval + ' days ago';
+
+    interval = Math.floor(seconds / 3600);
+    if (interval >= 1) return interval === 1 ? '1 hour ago' : interval + ' hours ago';
+
+    interval = Math.floor(seconds / 60);
+    if (interval >= 1) return interval === 1 ? '1 minute ago' : interval + ' minutes ago';
+
+    return seconds < 10 ? 'just now' : seconds + ' seconds ago';
+}
+
+// Function to update time ago for all comments
+function updateTimeAgo() {
+    const commentElements = document.querySelectorAll('.comment-time');
+    commentElements.forEach(element => {
+        const dateString = element.getAttribute('data-created-at');
+        element.textContent = getTimeAgo(dateString);
+    });
+}
+
+// Function to fetch and display comments with time ago format
+function fetchComments(employeeId) {
+    fetch('fetch_comments.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ employee_id: employeeId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const commentList = document.querySelector('.modal-body .comment-list');
+        commentList.innerHTML = ''; // Clear existing comments
+
+        if (data.comments && data.comments.length > 0) {
+            data.comments.forEach(comment => {
+                // Create comment element
+                const commentElement = document.createElement('div');
+                commentElement.classList.add('comment');
+
+                commentElement.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-author">${comment.username || 'Anonymous'}</span>
+                        <span class="comment-time" data-created-at="${comment.created_at}">${getTimeAgo(comment.created_at)}</span>
+                    </div>
+                    <div class="comment-content">${comment.comment}</div>
+                    <div class="comment-actions">
+                        <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
+                        <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
+                    </div>
+                `;
+
+                commentList.appendChild(commentElement);
+            });
+
+            // Update the comment count
+            const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
+            if (commentCountElement) {
+                commentCountElement.textContent = data.total_comments;
+            }
+        } else {
+            // Show empty state
+            const emptyState = document.createElement('div');
+            emptyState.classList.add('empty-comments');
+            emptyState.innerHTML = `
+                <i class="bi bi-chat-square-text"></i>
+                <p>No comments yet. Be the first to comment!</p>
+            `;
+            commentList.appendChild(emptyState);
+
+            // Update the comment count to 0
+            const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
+            if (commentCountElement) {
+                commentCountElement.textContent = 0;
+            }
+        }
+
+        // Start updating time ago every 1 second
+        setInterval(updateTimeAgo, 1000);
+    })
+    .catch(error => console.error('Error:', error));
+}
 
     function showNextEmployee(categoryIndex) {
         const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
@@ -1610,11 +1649,17 @@ function addNotificationToDropdown(notification) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            // Update the reaction count in the UI
+            // Update the reaction counts in the UI
             const reactionCountElement = document.getElementById(`reaction-count-${employeeId}`);
-            reactionCountElement.textContent = data.count;
+            if (reactionCountElement) {
+                let reactionText = '';
+                for (const [reaction, count] of Object.entries(data.counts)) {
+                    reactionText += `${reaction}: ${count} `;
+                }
+                reactionCountElement.textContent = reactionText.trim();
+            }
         } else {
-            console.error('Failed to fetch reaction count');
+            console.error('Failed to fetch reaction counts');
         }
     })
     .catch(error => console.error('Error:', error));

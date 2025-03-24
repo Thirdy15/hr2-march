@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     $employeeId = $data['employee_id'];
     $reaction = $data['reaction'];
-    $adminId = $_SESSION['a_id'];
+    $adminId = $_SESSION['a_id']; // Get the admin ID from the session
 
     // Validate input
     if (empty($employeeId) || empty($reaction)) {
@@ -19,7 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // Check if a reaction already exists for the given employee by the current user
+    // Validate reaction (only allow specific reactions)
+    $allowedReactions = ["👍 Like", "❤️ Heart", "😎 Awesome", "😮 Wow"];
+    if (!in_array($reaction, $allowedReactions)) {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid reaction']);
+        exit();
+    }
+
+    // Check if the admin has already reacted to this employee
     $checkSql = "SELECT id FROM employee_reactions WHERE employee_id = ? AND admin_id = ?";
     $checkStmt = $conn->prepare($checkSql);
     $checkStmt->bind_param("ii", $employeeId, $adminId);
@@ -27,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $checkResult = $checkStmt->get_result();
 
     if ($checkResult->num_rows > 0) {
-        // Reaction exists, update it
+        // Admin has already reacted, update the existing reaction
         $updateSql = "UPDATE employee_reactions SET reaction = ? WHERE employee_id = ? AND admin_id = ?";
         $updateStmt = $conn->prepare($updateSql);
         $updateStmt->bind_param("sii", $reaction, $employeeId, $adminId);
@@ -40,16 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $updateStmt->close();
     } else {
-        // Reaction does not exist, insert a new one
+        // Admin has not reacted yet, insert a new reaction
         $insertSql = "INSERT INTO employee_reactions (employee_id, admin_id, reaction) VALUES (?, ?, ?)";
         $insertStmt = $conn->prepare($insertSql);
         $insertStmt->bind_param("iis", $employeeId, $adminId, $reaction);
 
         if ($insertStmt->execute()) {
             echo json_encode(['status' => 'success', 'message' => 'Reaction saved successfully']);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Failed to save reaction']);
-        }
+        } 
+          
 
         $insertStmt->close();
     }

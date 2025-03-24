@@ -2,7 +2,7 @@
 session_start();
 include '../../db/db_conn.php';
 
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Fieldworker') {
     header("Location: ../../login.php");
     exit();
 }

@@ -26,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $comments = [];
 
     while ($row = $result->fetch_assoc()) {
+        // Convert the MySQL timestamp to a JavaScript-friendly format (ISO 8601)
+        $row['created_at'] = date('c', strtotime($row['created_at'])); // Format: 2023-10-25T12:34:56+00:00
         $comments[] = $row;
     }
 

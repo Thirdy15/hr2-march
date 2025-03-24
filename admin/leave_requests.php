@@ -325,9 +325,6 @@ function log_activity($adminId, $action_type, $affected_feature, $details) {
     $log_stmt->execute();
 }
 
-
-
-
 // Prepare and execute the query for leave statistics
 $count_sql = "SELECT 
                 DATE_FORMAT(created_at, '%Y-%m') AS month,
@@ -392,8 +389,29 @@ $ongoing_result = $ongoing_stmt->get_result();
 $ongoing_row = $ongoing_result->fetch_assoc();
 $ongoing_leave = $ongoing_row['ongoing_leaves']; // Total ongoing leaves
 
-echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_leave";
+// Function to determine leave category based on leave type
+function getLeaveCategory($leaveType) {
+    $paidLeaveTypes = [
+        'Vacation Leave',
+        'Sick Leave',
+        'Maternity Leave',
+        'Paternity Leave',
+        'Bereavement Leave',
+        'Service Incentive Leave'
+    ];
+    
+    return in_array($leaveType, $paidLeaveTypes) ? 'Paid Leave' : 'Unpaid Leave';
+}
 
+// Add leave category to leave requests if not already set
+$update_category_sql = "UPDATE leave_requests 
+                        SET leave_category = CASE 
+                            WHEN leave_type IN ('Vacation Leave', 'Sick Leave', 'Maternity Leave', 'Paternity Leave', 'Bereavement Leave', 'Service Incentive Leave') 
+                            THEN 'Paid Leave' 
+                            ELSE 'Unpaid Leave' 
+                        END
+                        WHERE leave_category IS NULL OR leave_category = ''";
+$conn->query($update_category_sql);
 ?>
 
 <!DOCTYPE html>
@@ -554,8 +572,6 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
             to { opacity: 1; transform: translateY(0); }
         }
 
-        
-
         /* Form controls */
         .form-control {
             background-color: var(--bg-black);
@@ -592,6 +608,16 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
             background-color: rgba(16, 185, 129, 0.2);
             color: #10b981;
         }
+        
+        .leave-badge-paid {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+        
+        .leave-badge-unpaid {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
 
         /* Dashboard stats */
         .stats-container {
@@ -608,6 +634,41 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
             display: flex;
             align-items: center;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card.pending::before {
+            background-color: var(--warning);
+        }
+        
+        .stat-card.approved::before {
+            background-color: var(--success);
+        }
+        
+        .stat-card.denied::before {
+            background-color: var(--danger);
+        }
+        
+        .stat-card.ongoing::before {
+            background-color: var(--info);
         }
 
         .stat-icon {
@@ -620,16 +681,43 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
             margin-right: 1rem;
             font-size: 1.5rem;
         }
-
+        
+        .stat-info {
+            flex: 1;
+        }
+        
         .stat-info h3 {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 700;
             margin-bottom: 0.25rem;
+            transition: color 0.3s ease;
         }
-
+        
         .stat-info p {
             color: var(--text-muted);
             margin-bottom: 0;
+            font-size: 0.95rem;
+        }
+        
+        .stat-card:hover .stat-info h3 {
+            color: var(--primary-color);
+        }
+        
+        .stat-card .stat-trend {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 0.75rem;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .stat-trend.up {
+            color: var(--success);
+        }
+        
+        .stat-trend.down {
+            color: var(--danger);
         }
 
         /* Employee info */
@@ -740,6 +828,7 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
     </style>
 </head>
 
+
 <body class="sb-nav-fixed">
     <?php include 'navbar.php'; ?>'
     <div id="layoutSidenav">
@@ -749,10 +838,21 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
                 <div class="container-fluid px-4">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <h1 class="fw-bold mb-1">Leave Requests</h1>
                         </div>
                     </div>
-
+                    <!-- Add this button in the header section, right after the h1 element -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h1 class="fw-bold mb-1">Leave Requests</h1>
+                            </div>
+                            <div>
+                                <button id="calendarToggle" class="btn btn-primary">
+                                    <i class="fas fa-calendar-alt me-2"></i>View Calendar
+                                </button>
+                            </div>
+                        </div>
+                        
+                            
                     <!-- Calendar Container -->
                     <div class="container-fluid" id="calendarContainer"
                         style="position: fixed; top: 7%; right: 40; z-index: 1050;
@@ -766,43 +866,56 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
 
                     <!-- Stats Overview -->
                     <div class="stats-container">
-                        <div class="stat-card">
+                        <div class="stat-card pending" onclick="filterByStatus('Pending')">
                             <div class="stat-icon bg-warning bg-opacity-10 text-warning">
                                 <i class="fas fa-clock"></i>
                             </div>
                             <div class="stat-info">
                                 <h3><?php echo $total_pending; ?></h3>
-                                <p>Pending</p>
+                                <p>Pending Requests</p>
+                            </div>
+                            <div class="stat-trend">
+                                <i class="fas fa-info-circle"></i> Click to view
                             </div>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card approved" onclick="filterByStatus('Approved')">
                             <div class="stat-icon bg-success bg-opacity-10 text-success">
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="stat-info">
                                 <h3><?php echo $total_approved; ?></h3>
-                                <p>Approved</p>
+                                <p>Approved Requests</p>
+                            </div>
+                            <div class="stat-trend">
+                                <i class="fas fa-info-circle"></i> Click to view
                             </div>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card denied" onclick="filterByStatus('Denied')">
                             <div class="stat-icon bg-danger bg-opacity-10 text-danger">
                                 <i class="fas fa-times-circle"></i>
                             </div>
                             <div class="stat-info">
                                 <h3><?php echo $total_denied; ?></h3>
-                                <p>Denied</p>
+                                <p>Denied Requests</p>
+                            </div>
+                            <div class="stat-trend">
+                                <i class="fas fa-info-circle"></i> Click to view
                             </div>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card ongoing" onclick="filterByStatus('Ongoing')">
                             <div class="stat-icon bg-primary bg-opacity-10 text-primary">
                                 <i class="fas fa-calendar-day"></i>
                             </div>
                             <div class="stat-info">
-                            <h3><?php echo $ongoing_leave; ?></h3>
-                            <p>Ongoing Leave</p>
+                                <h3><?php echo $ongoing_leave; ?></h3>
+                                <p>Ongoing Leave</p>
+                            </div>
+                            <div class="stat-trend">
+                                <i class="fas fa-info-circle"></i> Click to view
                             </div>
                         </div>
                     </div>
+                    
 
                     <!-- Status Alerts -->
                     <div class="container px-0">
@@ -839,7 +952,7 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
                         <div class="card-header">
                             <div class="d-flex align-items-center">
                                 <i class="fas fa-clock me-2"></i>
-                                <span>Leave Requests</span>
+                                <span id="tableTitle">Leave Requests</span>
                             </div>
                             <div class="d-flex align-items-center">
                                 <div class="input-group">
@@ -888,20 +1001,10 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
                                                     $leave_badge_class = 'leave-badge-status';
                                                     switch ($row['leave_type']) {
                                                         case 'Vacation Leave':
-                                                            $leave_badge_class = 'leave-badge-status';
-                                                            break;
                                                         case 'Sick Leave':
-                                                            $leave_badge_class = 'leave-badge-status';
-                                                            break;
                                                         case 'Emergency Leave':
-                                                            $leave_badge_class = 'leave-badge-status';
-                                                            break;
                                                         case 'Bereavement Leave':
-                                                            $leave_badge_class = 'leave-badge-status';
-                                                            break;
                                                         case 'Maternity Leave':
-                                                            $leave_badge_class = 'leave-badge-status';
-                                                            break;
                                                         case 'Paternity Leave':
                                                             $leave_badge_class = 'leave-badge-status';
                                                             break;
@@ -909,8 +1012,17 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
 
                                                     // Get employee initials for avatar
                                                     $initials = strtoupper(substr($row['first_name'], 0, 1) . substr($row['last_name'], 0, 1));
+                                                    
+                                                    // Determine category badge class
+                                                    $category_badge_class = '';
+                                                    $leave_category = isset($row['leave_category']) ? $row['leave_category'] : getLeaveCategory($row['leave_type']);
+                                                    if ($leave_category === 'Paid Leave') {
+                                                        $category_badge_class = 'leave-badge-paid';
+                                                    } else {
+                                                        $category_badge_class = 'leave-badge-unpaid';
+                                                    }
                                                 ?>
-                                            <tr>
+                                            <tr data-status="<?php echo $row['status']; ?>">
                                                 <td>
                                                     <div class="d-flex flex-column">
                                                         <span><?php echo htmlspecialchars(date("M j, Y", strtotime($row['created_at']))); ?></span>
@@ -951,10 +1063,9 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <div class="d-flex flex-column">
-                                                        <span><?php echo htmlspecialchars($row['leave_category']); ?></span>
-                                                        <small class="text-muted">
-                                                    </div>                    
+                                                    <span class="leave-badge <?php echo $category_badge_class; ?>">
+                                                        <?php echo htmlspecialchars($leave_category); ?>
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <?php if (!empty($row['proof'])): ?>
@@ -1355,6 +1466,68 @@ echo "Ongoing Leaves (from $first_day_of_month to $last_day_of_month): $ongoing_
                 denyBtn.disabled = false;
                 alert('An error occurred while processing your request.');
             });
+        }
+        
+        // Function to filter table by status
+        function filterByStatus(status) {
+            const tableTitle = document.getElementById('tableTitle');
+            const tableRows = document.querySelectorAll('#datatablesSimple tbody tr');
+            
+            // Update table title
+            if (status === 'Pending') {
+                tableTitle.innerHTML = '<i class="fas fa-clock me-2"></i>Pending Leave Requests';
+            } else if (status === 'Approved') {
+                tableTitle.innerHTML = '<i class="fas fa-check-circle me-2"></i>Approved Leave Requests';
+            } else if (status === 'Denied') {
+                tableTitle.innerHTML = '<i class="fas fa-times-circle me-2"></i>Denied Leave Requests';
+            } else if (status === 'Ongoing') {
+                tableTitle.innerHTML = '<i class="fas fa-calendar-day me-2"></i>Ongoing Leave Requests';
+            } else {
+                tableTitle.innerHTML = '<i class="fas fa-list me-2"></i>All Leave Requests';
+            }
+            
+            // Filter table rows
+            tableRows.forEach(row => {
+                const rowStatus = row.getAttribute('data-status');
+                if (status === 'All' || rowStatus === status || 
+                    (status === 'Approved' && (rowStatus === 'Approved' || rowStatus === 'Supervisor Approved')) ||
+                    (status === 'Denied' && (rowStatus === 'Denied' || rowStatus === 'Supervisor Denied')) ||
+                    (status === 'Ongoing' && rowStatus === 'Approved')) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // Check if there are any visible rows
+            let visibleRows = false;
+            tableRows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    visibleRows = true;
+                }
+            });
+            
+            // If no visible rows, show a message
+            const noDataRow = document.querySelector('#datatablesSimple tbody tr.no-data');
+            if (!visibleRows) {
+                if (!noDataRow) {
+                    const tbody = document.querySelector('#datatablesSimple tbody');
+                    const newRow = document.createElement('tr');
+                    newRow.className = 'no-data';
+                    newRow.innerHTML = `
+                        <td colspan="9" class="text-center py-4">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                                <h5>No ${status.toLowerCase()} leave requests found</h5>
+                                <p class="text-muted">Try a different filter or check back later</p>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(newRow);
+                }
+            } else if (noDataRow) {
+                noDataRow.remove();a
+            }
         }
     </script>
 </body>

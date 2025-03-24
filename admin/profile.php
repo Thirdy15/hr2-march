@@ -136,7 +136,7 @@ $conn->close();
         .initials-avatar {
             width: 230px;
             height: 230px;
-            margin-left: 45px;
+            margin-left: 90px;
             border-radius: 50%;
             display: flex;
             justify-content: center;

@@ -20,16 +20,19 @@ $result_employee = $stmt_employee->get_result();
 $employeeInfo = $result_employee->fetch_assoc();
 
 // Fetch the used leave by summing up approved leave days
-$usedLeaveQuery = "SELECT start_date, end_date, SUM(DATEDIFF(end_date, start_date) + 1) AS used_leaves 
-                   FROM leave_requests 
+$usedLeaveQuery = "SELECT start_date, end_date, SUM(DATEDIFF(end_date, start_date) + 1) AS used_leaves, leave_category
+                   FROM leave_requests
                    WHERE employee_id = ? AND status = 'approved'
-                   GROUP BY employee_id";
+                   GROUP BY leave_category";
 $usedLeaveStmt = $conn->prepare($usedLeaveQuery);
-$usedLeaveStmt->bind_param("s", $employee_id); // Corrected variable name
+$usedLeaveStmt->bind_param("s", $employee_id);
 $usedLeaveStmt->execute();
 $usedLeaveResult = $usedLeaveStmt->get_result();
-$usedLeaveRow = $usedLeaveResult->fetch_assoc();
-$usedLeave = $usedLeaveRow['used_leaves'] ?? 0; // Default to 0 if no leave has been used
+$usedLeaveData = [];
+
+while ($row = $usedLeaveResult->fetch_assoc()) {
+    $usedLeaveData[$row['leave_category']] = $row['used_leaves'];
+}
 
 // Fetch the employee's gender from the employee_register table
 $gender = $employeeInfo['gender']; // Assuming gender is stored in employee_register
@@ -45,32 +48,33 @@ $leavesInfo = $result_leave->fetch_assoc();
 
 // Calculate total available leaves based on gender
 $totalAvailableLeaves = 0;
+$leaveCategories = [];
+
 if ($gender == 'Male') {
     // For male employees
-    $totalAvailableLeaves = 
-        ($leavesInfo['bereavement_leave_male'] ?? 0) +
-        ($leavesInfo['emergency_leave_male'] ?? 0) +
-        ($leavesInfo['parental_leave_male'] ?? 0) +
-        ($leavesInfo['paternity_leave_male'] ?? 0) +
-        ($leavesInfo['service_incentive_leave_male'] ?? 0) +
-        ($leavesInfo['sick_leave_male'] ?? 0) +
-        ($leavesInfo['vacation_leave_male'] ?? 0);
+    $leaveCategories = [
+        'bereavement_leave_male', 'emergency_leave_male', 'parental_leave_male',
+        'paternity_leave_male', 'service_incentive_leave_male', 'sick_leave_male', 'vacation_leave_male'
+    ];
 } else {
     // For female employees
-    $totalAvailableLeaves = 
-        ($leavesInfo['bereavement_leave'] ?? 0) +
-        ($leavesInfo['emergency_leave'] ?? 0) +
-        ($leavesInfo['maternity_leave'] ?? 0) +
-        ($leavesInfo['mcw_special_leave'] ?? 0) +
-        ($leavesInfo['parental_leave'] ?? 0) +
-        ($leavesInfo['service_incentive_leave'] ?? 0) +
-        ($leavesInfo['sick_leave'] ?? 0) +
-        ($leavesInfo['vacation_leave'] ?? 0) +
-        ($leavesInfo['vawc_leave'] ?? 0);
+    $leaveCategories = [
+        'bereavement_leave', 'emergency_leave', 'maternity_leave', 'mcw_special_leave',
+        'parental_leave', 'service_incentive_leave', 'sick_leave', 'vacation_leave', 'vawc_leave'
+    ];
+}
+
+$categoryBalances = [];
+foreach ($leaveCategories as $category) {
+    $categoryBalances[$category] = $leavesInfo[$category] ?? 0;
+    $totalAvailableLeaves += $categoryBalances[$category];
 }
 
 // Calculate remaining total leaves by subtracting used leaves
-$remainingLeaves = $totalAvailableLeaves - $usedLeave;
+$remainingLeaves = [];
+foreach ($leaveCategories as $category) {
+    $remainingLeaves[$category] = ($categoryBalances[$category] ?? 0) - ($usedLeaveData[$category] ?? 0);
+}
 
 // Fetch the leave requests that are approved for the employee
 $query_approved_leave = "SELECT * FROM leave_requests WHERE employee_id = ? AND status = 'approved' ORDER BY start_date DESC LIMIT 1"; // Only get the most recent approved leave
@@ -159,7 +163,7 @@ $conn->close();
                 <?php endif; ?>
             </div>
         </div>
-        
+
         <div class="card bg-dark text-light border border-secondary mb-4">
             <div class="card-header border-bottom border-secondary">
                 <h5 class="card-title mb-0">Employee Information</h5>
@@ -175,7 +179,7 @@ $conn->close();
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <p><strong>Position:</strong> <?php echo $employeeInfo['position']; ?></p>
+                        <p><strong>Position:</strong> <?php echo $employeeInfo['role']; ?></p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>Department:</strong> <?php echo $employeeInfo['department']; ?></p>
@@ -183,7 +187,7 @@ $conn->close();
                 </div>
             </div>
         </div>
-        
+
         <div class="card bg-dark text-light border border-secondary">
             <div class="card-header border-bottom border-secondary">
                 <h5 class="card-title mb-0">Leave Balance</h5>
@@ -197,144 +201,23 @@ $conn->close();
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if ($gender == 'Female') { ?>
+                        <?php foreach ($leaveCategories as $category): ?>
                             <tr>
-                                <td>Bereavement Leave</td>
+                                <td><?php echo ucwords(str_replace('_', ' ', $category)); ?></td>
                                 <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['bereavement_leave']) && $leavesInfo['bereavement_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['bereavement_leave']) ? $leavesInfo['bereavement_leave'] : '0'; ?>
+                                    <span class="badge bg-<?php echo $remainingLeaves[$category] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
+                                        <?php echo $remainingLeaves[$category]; ?>
                                     </span>
                                 </td>
                             </tr>
-                            <tr>
-                                <td>Emergency Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['emergency_leave']) && $leavesInfo['emergency_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['emergency_leave']) ? $leavesInfo['emergency_leave'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Maternity Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['maternity_leave']) && $leavesInfo['maternity_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['maternity_leave']) ? $leavesInfo['maternity_leave'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>MCW Special Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['mcw_special_leave']) && $leavesInfo['mcw_special_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['mcw_special_leave']) ? $leavesInfo['mcw_special_leave'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Parental Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['parental_leave']) && $leavesInfo['parental_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['parental_leave']) ? $leavesInfo['parental_leave'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Service Incentive Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['service_incentive_leave']) && $leavesInfo['service_incentive_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['service_incentive_leave']) ? $leavesInfo['service_incentive_leave'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Sick Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['sick_leave']) && $leavesInfo['sick_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['sick_leave']) ? $leavesInfo['sick_leave'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Vacation Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['vacation_leave']) && $leavesInfo['vacation_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['vacation_leave']) ? $leavesInfo['vacation_leave'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>VAWC Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['vawc_leave']) && $leavesInfo['vawc_leave'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['vawc_leave']) ? $leavesInfo['vawc_leave'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                        <?php } elseif ($gender == 'Male') { ?>
-                            <tr>
-                                <td>Bereavement Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['bereavement_leave_male']) && $leavesInfo['bereavement_leave_male'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['bereavement_leave_male']) ? $leavesInfo['bereavement_leave_male'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Emergency Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['emergency_leave_male']) && $leavesInfo['emergency_leave_male'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['emergency_leave_male']) ? $leavesInfo['emergency_leave_male'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Parental Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['parental_leave_male']) && $leavesInfo['parental_leave_male'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['parental_leave_male']) ? $leavesInfo['parental_leave_male'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Paternity Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['paternity_leave_male']) && $leavesInfo['paternity_leave_male'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['paternity_leave_male']) ? $leavesInfo['paternity_leave_male'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Service Incentive Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['service_incentive_leave_male']) && $leavesInfo['service_incentive_leave_male'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['service_incentive_leave_male']) ? $leavesInfo['service_incentive_leave_male'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Sick Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['sick_leave_male']) && $leavesInfo['sick_leave_male'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['sick_leave_male']) ? $leavesInfo['sick_leave_male'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Vacation Leave</td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-<?php echo isset($leavesInfo['vacation_leave_male']) && $leavesInfo['vacation_leave_male'] > 0 ? 'primary' : 'secondary'; ?>" style="font-size: 14px; padding: 6px 12px; width: 40px;">
-                                        <?php echo isset($leavesInfo['vacation_leave_male']) ? $leavesInfo['vacation_leave_male'] : '0'; ?>
-                                    </span>
-                                </td>
-                            </tr>
-                        <?php } ?>
+                        <?php endforeach; ?>
                     </tbody>
                     <tfoot>
                         <tr class="table-active">
                             <td><strong>Total Available Leave</strong></td>
                             <td class="text-center align-middle">
                                 <span class="badge bg-success" style="font-size: 14px; padding: 6px 12px;">
-                                    <?php echo $remainingLeaves; ?>
+                                    <?php echo array_sum($remainingLeaves); ?>
                                 </span>
                             </td>
                         </tr>
@@ -342,180 +225,60 @@ $conn->close();
                             <td><strong>Used Leave</strong></td>
                             <td class="text-center align-middle">
                                 <span class="badge bg-danger" style="font-size: 14px; padding: 6px 12px;">
-                                    <?php echo $usedLeave; ?>
+                                    <?php echo array_sum($usedLeaveData); ?>
                                 </span>
                             </td>
                         </tr>
                     </tfoot>
                 </table>
-                
-                <!-- Leave Balance Summary Section -->
-                <div class="mt-4 p-3 bg-dark border border-secondary rounded">
-                    <h5 class="mb-3 text-center">Leave Balance Summary</h5>
-                    <div class="row">
-                        <?php if ($gender == 'Female') { ?>
-                            <div class="col-md-4 mb-3">
-                                <div class="card bg-dark border border-secondary h-100">
-                                    <div class="card-body text-center">
-                                        <h6>Standard Leaves</h6>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Sick Leave:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['sick_leave']) && $leavesInfo['sick_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['sick_leave']) ? $leavesInfo['sick_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Vacation Leave:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['vacation_leave']) && $leavesInfo['vacation_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['vacation_leave']) ? $leavesInfo['vacation_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Emergency Leave:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['emergency_leave']) && $leavesInfo['emergency_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['emergency_leave']) ? $leavesInfo['emergency_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                    </div>
+            </div>
+        </div>
+
+        <!-- Leave Balance Summary Section -->
+        <div class="mt-4 p-3 bg-dark border border-secondary rounded">
+            <h5 class="mb-3 text-center">Leave Balance Summary</h5>
+            <div class="row">
+                <?php foreach ($leaveCategories as $category): ?>
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-dark border border-secondary h-100">
+                            <div class="card-body text-center">
+                                <h6><?php echo ucwords(str_replace('_', ' ', $category)); ?></h6>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <span>Available:</span>
+                                    <span class="badge bg-<?php echo $remainingLeaves[$category] > 0 ? 'primary' : 'secondary'; ?>">
+                                        <?php echo $remainingLeaves[$category]; ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <span>Used:</span>
+                                    <span class="badge bg-danger">
+                                        <?php echo $usedLeaveData[$category] ?? 0; ?>
+                                    </span>
                                 </div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="card bg-dark border border-secondary h-100">
-                                    <div class="card-body text-center">
-                                        <h6>Special Leaves</h6>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Maternity:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['maternity_leave']) && $leavesInfo['maternity_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['maternity_leave']) ? $leavesInfo['maternity_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>MCW Special:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['mcw_special_leave']) && $leavesInfo['mcw_special_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['mcw_special_leave']) ? $leavesInfo['mcw_special_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>VAWC Leave:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['vawc_leave']) && $leavesInfo['vawc_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['vawc_leave']) ? $leavesInfo['vawc_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="card bg-dark border border-secondary h-100">
-                                    <div class="card-body text-center">
-                                        <h6>Other Leaves</h6>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Bereavement:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['bereavement_leave']) && $leavesInfo['bereavement_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['bereavement_leave']) ? $leavesInfo['bereavement_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Parental:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['parental_leave']) && $leavesInfo['parental_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['parental_leave']) ? $leavesInfo['parental_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Service Incentive:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['service_incentive_leave']) && $leavesInfo['service_incentive_leave'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['service_incentive_leave']) ? $leavesInfo['service_incentive_leave'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php } elseif ($gender == 'Male') { ?>
-                            <div class="col-md-4 mb-3">
-                                <div class="card bg-dark border border-secondary h-100">
-                                    <div class="card-body text-center">
-                                        <h6>Standard Leaves</h6>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Sick Leave:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['sick_leave_male']) && $leavesInfo['sick_leave_male'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['sick_leave_male']) ? $leavesInfo['sick_leave_male'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Vacation Leave:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['vacation_leave_male']) && $leavesInfo['vacation_leave_male'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['vacation_leave_male']) ? $leavesInfo['vacation_leave_male'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Emergency Leave:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['emergency_leave_male']) && $leavesInfo['emergency_leave_male'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['emergency_leave_male']) ? $leavesInfo['emergency_leave_male'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="card bg-dark border border-secondary h-100">
-                                    <div class="card-body text-center">
-                                        <h6>Special Leaves</h6>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Paternity:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['paternity_leave_male']) && $leavesInfo['paternity_leave_male'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['paternity_leave_male']) ? $leavesInfo['paternity_leave_male'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Parental:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['parental_leave_male']) && $leavesInfo['parental_leave_male'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['parental_leave_male']) ? $leavesInfo['parental_leave_male'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="card bg-dark border border-secondary h-100">
-                                    <div class="card-body text-center">
-                                        <h6>Other Leaves</h6>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Bereavement:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['bereavement_leave_male']) && $leavesInfo['bereavement_leave_male'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['bereavement_leave_male']) ? $leavesInfo['bereavement_leave_male'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <span>Service Incentive:</span>
-                                            <span class="badge bg-<?php echo isset($leavesInfo['service_incentive_leave_male']) && $leavesInfo['service_incentive_leave_male'] > 0 ? 'primary' : 'secondary'; ?>">
-                                                <?php echo isset($leavesInfo['service_incentive_leave_male']) ? $leavesInfo['service_incentive_leave_male'] : '0'; ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php } ?>
+                        </div>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <div class="card bg-dark border border-secondary">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-0">Total Available Leave</h6>
-                                            <small class="text-muted">Combined from all leave types</small>
-                                        </div>
-                                        <span class="badge bg-success" style="font-size: 18px; padding: 8px 15px;">
-                                            <?php echo $remainingLeaves; ?> days
-                                        </span>
-                                    </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card bg-dark border border-secondary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">Total Available Leave</h6>
+                                    <small class="text-muted">Combined from all leave types</small>
                                 </div>
+                                <span class="badge bg-success" style="font-size: 18px; padding: 8px 15px;">
+                                    <?php echo array_sum($remainingLeaves); ?> days
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <?php if (isset($approved_leave_data)): ?>
         <div class="card bg-dark text-light border border-secondary mt-4">
             <div class="card-header border-bottom border-secondary">
@@ -536,7 +299,7 @@ $conn->close();
                         <span><?php echo $days_passed; ?> of <?php echo $leave_duration; ?> days (<?php echo round($progress_percentage); ?>%)</span>
                     </div>
                     <div class="progress bg-secondary">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $progress_percentage; ?>%" 
+                        <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $progress_percentage; ?>%"
                             aria-valuenow="<?php echo $progress_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
@@ -544,53 +307,55 @@ $conn->close();
         </div>
         <?php endif; ?>
     </div>
-    !-- Ongoing Leave Schedule Modal -->
-            <div class="modal fade" id="leaveScheduleModal" tabindex="-1" aria-labelledby="leaveScheduleModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content bg-dark text-light">
-                        <div class="modal-header border-bottom border-secondary">
-                            <h5 class="modal-title" id="leaveScheduleModalLabel">Ongoing Leave Schedule</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <table class="table table-bordered border-secondary text-light">
-                                <tbody>
-                                    <tr>
-                                        <td><strong>Leave Start Date</strong></td>
-                                        <td><?php echo $approved_leave_data['start_date']; ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Leave End Date</strong></td>
-                                        <td><?php echo $approved_leave_data['end_date']; ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Total Leave Duration</strong></td>
-                                        <td><?php echo $leave_duration; ?> days</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Days Passed</strong></td>
-                                        <td><?php echo $days_passed; ?> days</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            
-                            <div class="mt-3">
-                                <p class="d-flex justify-content-between">
-                                    <span>Progress:</span>
-                                    <span><?php echo round($progress_percentage); ?>%</span>
-                                </p>
-                                <div class="progress bg-secondary">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $progress_percentage; ?>%" 
-                                        aria-valuenow="<?php echo $progress_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-top border-secondary">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+
+    <!-- Ongoing Leave Schedule Modal -->
+    <div class="modal fade" id="leaveScheduleModal" tabindex="-1" aria-labelledby="leaveScheduleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title" id="leaveScheduleModalLabel">Ongoing Leave Schedule</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered border-secondary text-light">
+                        <tbody>
+                            <tr>
+                                <td><strong>Leave Start Date</strong></td>
+                                <td><?php echo $approved_leave_data['start_date']; ?></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Leave End Date</strong></td>
+                                <td><?php echo $approved_leave_data['end_date']; ?></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total Leave Duration</strong></td>
+                                <td><?php echo $leave_duration; ?> days</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Days Passed</strong></td>
+                                <td><?php echo $days_passed; ?> days</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="mt-3">
+                        <p class="d-flex justify-content-between">
+                            <span>Progress:</span>
+                            <span><?php echo round($progress_percentage); ?>%</span>
+                        </p>
+                        <div class="progress bg-secondary">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $progress_percentage; ?>%"
+                                aria-valuenow="<?php echo $progress_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                     </div>
                 </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

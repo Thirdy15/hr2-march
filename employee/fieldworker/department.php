@@ -2,37 +2,46 @@
 session_start();
 
 if (!isset($_SESSION['employee_id'])) {
-    header("Location: ../../employee/login.php");
+    header("Location: ../employee/employeelogin.php");
     exit();
 }
 
-// Include the database connection
-include '../../db/db_conn.php';
+// Include the database connection  
+include '../../db/db_conn.php'; 
 
+$role = $_SESSION['role']; 
+$department = $_SESSION['department']; 
+
+// Fetch user info from the employee_register table
 $employeeId = $_SESSION['employee_id'];
-$sql = "SELECT employee_id, firs_tname, middle_name, last_name, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE employee_id = ?";
+$sql = "SELECT employee_id, first_name, middle_name, last_name, birthdate, gender, email, role, position, department, phone_number, address, pfp 
+        FROM employee_register 
+        WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
 
-$position = $_SESSION['role']; // Ensure this is set during login
-$department = $_SESSION['department']; // Ensure this is set during login
+if (!$employeeInfo) {
+    die("Error: Employee information not found.");
+}
 
-// Define the role
-$role = 'employee';
+// Define the position
+$position = 'employee'; 
 
-// Fetch employee records where role is 'employee' and department matches the logged-in employee's department
-$sql = "SELECT employee_id, first_name, last_name, role, position FROM employee_register WHERE role = ? AND department = ? AND position IN ('supervisor', 'staff', 'fieldworker', 'contractual')";
+// Fetch employee records where position is 'employee' and department matches the logged-in employee's department
+$sql = "SELECT employee_id, first_name, last_name, role, position 
+        FROM employee_register 
+        WHERE position = ? AND department = ? AND role IN ('supervisor', 'staff', 'admin', 'fieldworker', 'contractual')";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param('ss', $role, $department);  // Bind the parameters for role and department (both strings)
+$stmt->bind_param('ss', $position, $department);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Fetch evaluations for this employee
+// Fetch evaluations for this employee from the evaluations table
 $evaluatedEmployees = [];
-$evalSql = "SELECT employee_id FROM admin_evaluations WHERE employee_id = ?";
+$evalSql = "SELECT employee_id FROM ptp_evaluations WHERE evaluator_id = ?";
 $evalStmt = $conn->prepare($evalSql);
 $evalStmt->bind_param('s', $employeeId);
 $evalStmt->execute();
@@ -43,14 +52,14 @@ if ($evalResult->num_rows > 0) {
     }
 }
 
-// Fetch evaluation questions from the database for each category
+// Fetch evaluation questions from the database for each category and role
 $categories = ['Quality of Work', 'Communication Skills', 'Teamwork', 'Punctuality', 'Initiative'];
 $questions = [];
 
 foreach ($categories as $category) {
-    $categorySql = "SELECT question FROM evaluation_questions WHERE category = ?";
+    $categorySql = "SELECT question FROM evaluation_questions WHERE category = ? AND role = ?";
     $categoryStmt = $conn->prepare($categorySql);
-    $categoryStmt->bind_param('s', $category);
+    $categoryStmt->bind_param('ss', $category, $role);
     $categoryStmt->execute();
     $categoryResult = $categoryStmt->get_result();
     $questions[$category] = [];
@@ -66,12 +75,18 @@ foreach ($categories as $category) {
 $employees = [];
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
-        // Exclude the logged-in employee from the list
         if ($row['employee_id'] != $employeeId) {
             $employees[] = $row;
         }
     }
 }
+
+// Calculate statistics
+$totalEmployees = count($employees);
+$evaluatedCount = count($evaluatedEmployees);
+$pendingCount = $totalEmployees - $evaluatedCount;
+$completionPercentage = $totalEmployees > 0 ? round(($evaluatedCount / $totalEmployees) * 100) : 0;
+$pendingPercentage = 100 - $completionPercentage;
 
 // Close the database connection
 $conn->close();
@@ -82,482 +97,413 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Evaluation</title>
+    <title>Employee Evaluation Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../css/styles.css" rel="stylesheet" />
+    <link href="../../css/star.css" rel="stylesheet" />
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
-    <link href='../../css/styles.css' rel='stylesheet' />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="../../css/calendar.css" rel="stylesheet"/>
+    <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root {
-            --primary-color: #4361ee;
-            --primary-hover: #3a56d4;
-            --secondary-color: #3f37c9;
-            --accent-color: #4cc9f0;
-            --success-color: #4ade80;
-            --warning-color: #fbbf24;
-            --danger-color: #f87171;
-            --dark-bg: rgba(33, 37, 41) !important;
-            --card-bg: #1f2937;
-            --border-color: #374151;
-            --text-primary: #f9fafb;
-            --text-secondary: #d1d5db;
-            --text-muted: #9ca3af;
+            --dark-bg: #121212;
+            --card-bg: #1e1e1e;
+            --darker-card-bg: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --border-color: #2d2d2d;
+            --blue: #3a86ff;
+            --green: #06d6a0;
+            --red: #ef476f;
         }
-
+        
         body {
-            font-family: 'Inter', sans-serif;
             background-color: var(--dark-bg);
             color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
-        .page-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
+        
+        .navbar {
+            background-color: var(--card-bg) !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
-
-        .page-header {
-            margin-bottom: 2rem;
+        
+        #layoutSidenav_nav {
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+        }
+        
+        .sb-sidenav {
+            background-color: var(--card-bg);
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background-color: var(--darker-card-bg);
+            border-radius: 8px;
+            padding: 20px;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-
-        .page-title {
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .stat-icon.blue {
+            background-color: var(--blue);
+            color: white;
+        }
+        
+        .stat-icon.green {
+            background-color: var(--green);
+            color: white;
+        }
+        
+        .stat-icon.red {
+            background-color: var(--red);
+            color: white;
+        }
+        
+        .stat-value {
             font-size: 2.5rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            margin-bottom: 5px;
+            line-height: 1;
         }
-
-        .page-subtitle {
-            font-size: 1.2rem;
+        
+        .stat-label {
             color: var(--text-secondary);
-            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
         }
-
-        .employee-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        
+        /* Add this to your CSS styles section */
+        .progress-container {
             position: relative;
+            height: 30px;
+            background-color: #2a2a2a;
+            border-radius: 15px;
             overflow: hidden;
+            margin-bottom: 10px;
         }
 
-        .employee-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .employee-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
+        .progress-bar {
             height: 100%;
-            background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
+            border-radius: 15px;
+            position: relative;
+            transition: width 0.5s ease, background-color 0.5s ease;
         }
 
+        .progress-bar.complete {
+            background-color: var(--green);
+            z-index: 2; /* Ensure the green bar is on top */
+        }
+
+        .progress-bar.pending {
+            background-color: var(--red);
+            z-index: 1; /* Red bar stays behind */
+        }
+
+        .progress-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            z-index: 3; /* Ensure the label is always on top */
+            width: 100%;
+            text-align: center;
+        }
+        
+        .progress-section {
+            background-color: var(--darker-card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .progress-section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        
+        
+        
+        
+        .progress-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        
+        .progress-stats .complete {
+            color: var(--green); /* Green color for complete */
+        }
+        
+        .progress-stats .pending {
+            color: var(--red); /* Red color for pending */
+        }
+        
+        /* Rest of your CSS styles remain the same */
+        .employees-section {
+            background-color: var(--darker-card-bg);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-header h2 {
+            font-size: 1.2rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+        
+        .section-header i {
+            color: var(--text-primary);
+        }
+        
+        .search-container {
+            position: relative;
+        }
+        
+        .search-input {
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 15px 8px 35px;
+            border-radius: 50px;
+            width: 250px;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--blue);
+            box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.2);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+        
+        .employees-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .employees-table th {
+            text-align: left;
+            padding: 12px 15px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .employees-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .employees-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .employee-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            margin-right: 10px;
+            background-color: #4f46e5; /* Indigo color */
+        }
+        
         .employee-info {
             display: flex;
             align-items: center;
-            margin-bottom: 1rem;
         }
-
-        .employee-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-right: 1rem;
-        }
-
-        .employee-details {
-            flex: 1;
-        }
-
-        .employee-name {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .employee-position {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .employee-position i {
-            margin-right: 0.5rem;
-            color: var(--accent-color);
-        }
-
-        .employee-role {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            background-color: rgba(67, 97, 238, 0.15);
-            color: var(--primary-color);
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 50px;
             font-size: 0.8rem;
-            font-weight: 500;
-            margin-top: 0.5rem;
-        }
-
-        .action-btn {
-            display: flex;
+            font-weight: 600;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            padding: 0.5rem 1.25rem;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            border: none;
+            gap: 5px;
         }
-
-        .evaluate-btn {
-            background-color: var(--primary-color);
+        
+        .status-badge.pending {
+            background-color: var(--red);
             color: white;
         }
-
-        .evaluate-btn:hover {
-            background-color: var(--primary-hover);
+        
+        .status-badge.completed {
+            background-color: var(--green);
+            color: white;
+        }
+        
+        .btn-evaluate {
+            background-color: var(--blue);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-evaluate:hover {
+            background-color: #2a75e6;
             transform: translateY(-2px);
         }
-
-        .evaluated-btn {
-            background-color: var(--success-color);
-            color: #065f46;
-            cursor: default;
-        }
-
-        .evaluated-btn i {
-            margin-right: 0.5rem;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-        }
-
-        .empty-state p {
-            font-size: 1.2rem;
+        
+        .btn-evaluate:disabled {
+            background-color: #2a2a2a;
             color: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
         }
-
-        /* Modal Styling */
+        
         .modal-content {
             background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
             border-radius: 12px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-color);
         }
-
+        
         .modal-header {
             border-bottom: 1px solid var(--border-color);
-            padding: 1.5rem;
+            padding: 20px;
         }
-
-        .modal-title {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .modal-body {
-            padding: 1.5rem;
-        }
-
+        
         .modal-footer {
             border-top: 1px solid var(--border-color);
-            padding: 1.5rem;
+            padding: 20px;
         }
-
-        .close-btn {
-            background: none;
+        
+        .modal-title {
+            font-weight: 600;
+            color: var(--blue);
+        }
+        
+        .btn-close-custom {
+            background: transparent;
             border: none;
-            color: var(--text-secondary);
+            color: var(--text-primary);
             font-size: 1.5rem;
-            transition: color 0.2s;
+            line-height: 1;
+            padding: 0;
         }
-
-        .close-btn:hover {
-            color: var(--text-primary);
-        }
-
-        .btn-submit {
-            background-color: var(--primary-color);
-            border: none;
-            padding: 0.75rem 1.5rem;
+        
+        .evaluation-table {
             border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-submit:hover {
-            background-color: var(--primary-hover);
-            transform: translateY(-2px);
-        }
-
-        .btn-cancel {
-            background-color: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-cancel:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
-        }
-
-        /* Evaluation Form Styling */
-        .evaluation-form {
-            margin-top: 1rem;
-        }
-
-        .category-section {
-            margin-bottom: 2rem;
-            border-radius: 10px;
             overflow: hidden;
         }
-
-        .category-header {
-            background-color: rgba(67, 97, 238, 0.1);
-            padding: 1rem 1.5rem;
-            border-radius: 8px 8px 0 0;
-            display: flex;
-            align-items: center;
+        
+        .evaluation-table th {
+            background-color: rgba(58, 134, 255, 0.15);
+            padding: 15px;
+            font-weight: 600;
         }
-
-        .category-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
+        
+        .evaluation-table td {
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .category-cell {
+            background-color: rgba(131, 56, 236, 0.1);
+            font-weight: 600;
             color: white;
         }
-
-        .category-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-        }
-
-        .question-item {
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            background-color: rgba(31, 41, 55, 0.5);
-        }
-
-        .question-item:last-child {
-            border-bottom: none;
-            border-radius: 0 0 8px 8px;
-        }
-
-        .question-text {
-            margin-bottom: 1rem;
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        /* Star Rating Styling */
+        
+        /* Enhanced star rating */
         .star-rating {
             display: flex;
             flex-direction: row-reverse;
             justify-content: flex-end;
         }
-
+        
         .star-rating input {
             display: none;
         }
-
+        
         .star-rating label {
             cursor: pointer;
-            width: 40px;
-            height: 40px;
-            background-color: var(--dark-bg);
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 0.5rem;
-            color: var(--text-muted);
             font-size: 1.5rem;
+            color: #555;
             transition: all 0.2s ease;
+            padding: 0 2px;
         }
-
+        
         .star-rating label:hover,
         .star-rating label:hover ~ label,
         .star-rating input:checked ~ label {
-            color: var(--warning-color);
+            color: #ffbe0b; /* Warning color for stars */
             transform: scale(1.1);
         }
-
-        .rating-value {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 0.5rem;
-        }
-
-        .rating-value span {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .progress-container {
-            margin-top: 2rem;
-        }
-
-        .progress-bar {
-            height: 6px;
-            border-radius: 3px;
-            background-color: var(--primary-color);
-        }
-
-        .employee-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .employee-modal-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-right: 1rem;
-        }
-
-        .employee-modal-details h5 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .employee-modal-details p {
-            color: var(--text-secondary);
-            margin: 0;
-        }
-
-        /* Responsive Adjustments */
+        
+        /* Responsive adjustments */
         @media (max-width: 768px) {
-            .page-title {
-                font-size: 2rem;
+            .stats-container {
+                grid-template-columns: 1fr;
             }
-
-            .employee-card {
-                padding: 1.25rem;
+            
+            .search-input {
+                width: 100%;
             }
-
-            .employee-avatar {
-                width: 50px;
-                height: 50px;
-                font-size: 1.25rem;
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
             }
-
-            .employee-name {
-                font-size: 1.1rem;
+            
+            .search-container {
+                width: 100%;
             }
-
-            .star-rating label {
-                width: 35px;
-                height: 35px;
-                font-size: 1.25rem;
-            }
-        }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        .employee-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .progress-indicator {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: var(--card-bg);
-            border-radius: 20px;
-            padding: 0.75rem 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            z-index: 1000;
-            border: 1px solid var(--border-color);
-        }
-
-        .progress-text {
-            margin-right: 1rem;
-            font-weight: 500;
-        }
-
-        .progress-bar-container {
-            flex: 1;
-            height: 8px;
-            background-color: var(--dark-bg);
-            border-radius: 4px;
-            overflow: hidden;
-            width: 200px;
-        }
-
-        .evaluation-progress {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-            width: 0%;
-            transition: width 0.3s ease;
         }
     </style>
 </head>
@@ -566,332 +512,528 @@ $conn->close();
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
-        <?php include 'sidebar.php'; ?>
-            <main class="bg-black">
-                <div class="page-container">
-                    <div class="page-header">
-                        <h1 class="page-title">Employee Evaluation</h1>
-                        <p class="page-subtitle">Evaluate your colleagues in the <?php echo htmlspecialchars($department); ?> department</p>
+            <main>
+                <div class="container-fluid px-4 py-4">
+                    <!-- Statistics Cards -->
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-value"><?php echo $totalEmployees; ?></div>
+                            <div class="stat-label">Total Employees</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="stat-value"><?php echo $evaluatedCount; ?></div>
+                            <div class="stat-label">Evaluated</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon red">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-value"><?php echo $pendingCount; ?></div>
+                            <div class="stat-label">Pending</div>
+                        </div>
                     </div>
-
-                    <div class="employee-grid">
-                        <?php if (!empty($employees)): ?>
-                            <?php foreach ($employees as $index => $employee): ?>
-                                <div class="employee-card fade-in" style="animation-delay: <?php echo $index * 0.1; ?>s">
-                                    <div class="employee-info">
-                                        <div class="employee-avatar">
-                                            <?php echo strtoupper(substr($employee['first_name'], 0, 1)); ?>
-                                        </div>
-                                        <div class="employee-details">
-                                            <h3 class="employee-name"><?php echo htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']); ?></h3>
-                                            <div class="employee-position">
-                                                <i class="bi bi-briefcase-fill"></i>
-                                                <?php echo htmlspecialchars($employee['position']); ?>
-                                            </div>
-                                            <span class="employee-role"><?php echo htmlspecialchars($employee['role']); ?></span>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex justify-content-end">
-                                        <?php if (in_array($employee['employee_id'], $evaluatedEmployees)): ?>
-                                            <button class="action-btn evaluated-btn" disabled>
-                                                <i class="bi bi-check-circle-fill"></i> Evaluated
-                                            </button>
-                                        <?php else: ?>
-                                            <button class="action-btn evaluate-btn"
-                                                onclick="evaluateEmployee(<?php echo $employee['employee_id']; ?>, '<?php echo htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']); ?>', '<?php echo htmlspecialchars($employee['position']); ?>')">
-                                                <i class="bi bi-star-fill me-2"></i> Evaluate
-                                            </button>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="empty-state">
-                                <i class="bi bi-people"></i>
-                                <p>No employees found for evaluation in <?php echo htmlspecialchars($department); ?>.</p>
+                    
+                    <!-- Progress Section -->
+                    <div class="progress-section">
+                        <h2>Evaluation Progress</h2>
+                        <div class="progress-container">
+                            <!-- Red background progress bar (always 100% width) -->
+                            <div class="progress-bar pending" style="width: 100%;">
+                                <!-- Green overlay progress bar that grows as employees are evaluated -->
+                                <div class="progress-bar complete" style="width: <?php echo $completionPercentage; ?>%; position: absolute; top: 0; left: 0; height: 100%;">
+                                    <!--<div class="progress-label"><?php echo $completionPercentage; ?>% Complete</div>
+                                </div> -->
+                                <?php if ($completionPercentage == 0): ?>
+                                    <div class="progress-label">No Evaluations</div>
+                                <?php endif; ?>
                             </div>
-                        <?php endif; ?>
+                        </div>
+                        <div class="progress-stats">
+                            <div class="complete"><?php echo $completionPercentage; ?>% Complete</div>
+                            <div class="pending"><?php echo $pendingPercentage; ?>% Pending</div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Evaluation Modal -->
-                <div class="modal fade" id="evaluationModal" tabindex="-1" aria-labelledby="evaluationModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="evaluationModalLabel">Employee Evaluation</h5>
-                                <button type="button" class="close-btn" data-bs-dismiss="modal" aria-label="Close">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
+                    
+                    <!-- Employees Section -->
+                    <div class="employees-section">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fas fa-building"></i> Administration Department Employees
+                            </h2>
+                            <div class="search-container">
+                                <i class="fas fa-search search-icon"></i>
+                                <input type="text" class="search-input" placeholder="Search employees...">
                             </div>
-                            <div class="modal-body">
-                                <div class="employee-header">
-                                    <div class="employee-modal-avatar" id="employeeAvatar"></div>
-                                    <div class="employee-modal-details" id="employeeDetails"></div>
-                                </div>
-
-                                <input type="hidden" id="employee_id" value="<?php echo $_SESSION['employee_id']; ?>">
-                                <div id="evaluationForm" class="evaluation-form"></div>
-
-                                <div class="progress-container">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Evaluation Progress</span>
-                                        <span id="progressPercentage">0%</span>
-                                    </div>
-                                    <div class="progress">
-                                        <div class="progress-bar" id="evaluationProgress" role="progressbar" style="width: 0%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                                <button type="button" class="btn btn-submit" onclick="submitEvaluation()">
-                                    <i class="bi bi-send-fill me-2"></i>Submit Evaluation
-                                </button>
-                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="employees-table">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Position</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($employees)): ?>
+                                        <?php foreach ($employees as $employee): ?>
+                                            <tr>
+                                                <td>
+                                                    <div class="employee-info">
+                                                        <div class="employee-avatar">
+                                                            <?php 
+                                                                $initials = substr($employee['first_name'], 0, 1) . substr($employee['last_name'], 0, 1);
+                                                                echo strtoupper($initials);
+                                                            ?>
+                                                        </div>
+                                                        <?php echo htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']); ?>
+                                                    </div>
+                                                </td>
+                                                <td><?php echo htmlspecialchars($employee['position']); ?></td>
+                                                <td><?php echo htmlspecialchars($employee['role']); ?></td>
+                                                <td>
+                                                    <?php if (in_array($employee['employee_id'], $evaluatedEmployees)): ?>
+                                                        <span class="status-badge completed">
+                                                            <i class="fas fa-check-circle"></i> Completed
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="status-badge pending">
+                                                            <i class="fas fa-circle"></i> Pending
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <button class="btn-evaluate" 
+                                                        onclick="evaluateEmployee(<?php echo $employee['employee_id']; ?>, '<?php echo htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']); ?>', '<?php echo htmlspecialchars($employee['role']); ?>')"
+                                                        <?php echo in_array($employee['employee_id'], $evaluatedEmployees) ? 'disabled' : ''; ?>>
+                                                        <i class="fas fa-star"></i> Evaluate
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4">
+                                                <i class="fas fa-user-slash fa-3x mb-3 d-block opacity-50"></i>
+                                                <p>No employees found to evaluate.</p>
+                                            </td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-
-                <!-- Progress Indicator (visible when scrolling through evaluation) -->
-                <div class="progress-indicator" id="progressIndicator" style="display: none;">
-                    <span class="progress-text">Evaluation Progress:</span>
-                    <div class="progress-bar-container">
-                        <div class="evaluation-progress" id="floatingProgress"></div>
-                    </div>
-                    <span class="ms-2" id="floatingPercentage">0%</span>
-                </div>
             </main>
+            
+            <!-- Evaluation Modal -->
+            <div class="modal fade" id="evaluationModal" tabindex="-1" role="dialog" aria-labelledby="evaluationModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="evaluationModalLabel">Employee Evaluation</h5>
+                            <button type="button" class="btn-close-custom" data-bs-dismiss="modal" aria-label="Close">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="employee-info mb-4 p-3 rounded" style="background-color: rgba(58, 134, 255, 0.1);">
+                                <div id="employeeDetails"></div>
+                            </div>
+                            
+                            <input type="hidden" id="employee_id" value="<?php echo $_SESSION['employee_id']; ?>">
+                            <div id="questions"></div>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Please rate all questions before submitting. 1 star is the lowest rating, and 6 stars is the highest.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="submitEvaluation()">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Evaluation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <?php include 'footer.php'; ?>
         </div>
     </div>
 
+    <!-- JavaScript Code -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let currentEmployeeId;
-        let currentEmployeeName;
-        let currentEmployeePosition;
-        let totalQuestions = 0;
-        let answeredQuestions = 0;
+        // Declare evaluatedEmployees and initialize it with PHP data
+        let evaluatedEmployees = <?php echo json_encode($evaluatedEmployees); ?>;
+        let currentEmployeeId, currentEmployeeName, currentEmployeeRole;
+        
+        // Function to fetch questions based on the evaluated employee's role
+        async function fetchQuestions(role) {
+            try {
+                const response = await fetch(`../../employee_db/supervisor/fetchQuestions.php?role=${role}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching questions:', error);
+                return {};
+            }
+        }
 
-        // The categories and questions fetched from the PHP script
-        const questions = <?php echo json_encode($questions); ?>;
-        const categoryIcons = {
-            'Quality of Work': 'bi-award',
-            'Communication Skills': 'bi-chat-dots',
-            'Teamwork': 'bi-people',
-            'Punctuality': 'bi-clock',
-            'Initiative': 'bi-lightning'
-        };
-
-        function evaluateEmployee(employee_id, employeeName, employeePosition) {
+        async function evaluateEmployee(employee_id, employeeName, employeeRole) {
             currentEmployeeId = employee_id;
             currentEmployeeName = employeeName;
-            currentEmployeePosition = employeePosition;
+            currentEmployeeRole = employeeRole;
 
-            // Reset progress tracking
-            totalQuestions = 0;
-            answeredQuestions = 0;
-            updateProgress();
-
-            // Set employee details in the modal
-            document.getElementById('employeeAvatar').textContent = employeeName.charAt(0).toUpperCase();
-            document.getElementById('employeeDetails').innerHTML = `
-                <h5>${employeeName}</h5>
-                <p><i class="bi bi-briefcase-fill me-2"></i>${employeePosition}</p>
-            `;
-
-            const evaluationForm = document.getElementById('evaluationForm');
-            evaluationForm.innerHTML = '';
-
-            // Create form sections for each category
-            for (const [category, categoryQuestions] of Object.entries(questions)) {
-                totalQuestions += categoryQuestions.length;
-
-                const categorySection = document.createElement('div');
-                categorySection.className = 'category-section';
-
-                // Create category header
-                const categoryHeader = document.createElement('div');
-                categoryHeader.className = 'category-header';
-                categoryHeader.innerHTML = `
-                    <div class="category-icon">
-                        <i class="bi ${categoryIcons[category] || 'bi-star'}"></i>
+            // Show loading state
+            document.getElementById('questions').innerHTML = `
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
-                    <h4 class="category-title">${category}</h4>
+                    <p class="mt-3">Loading evaluation questions...</p>
+                </div>
+            `;
+            
+            // Show the modal while loading
+            $('#evaluationModal').modal('show');
+
+            try {
+                // Fetch questions based on the evaluated employee's role
+                const questions = await fetchQuestions(employeeRole);
+
+                // Display employee details in the modal
+                const employeeDetails = `
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-placeholder bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <span class="fs-4">${employeeName.split(' ')[0][0]}${employeeName.split(' ')[1][0]}</span>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">${employeeName}</h5>
+                            <span class="badgeT bg-info text-dark">${employeeRole}</span>
+                        </div>
+                    </div>
                 `;
-                categorySection.appendChild(categoryHeader);
+                document.getElementById('employeeDetails').innerHTML = employeeDetails;
 
-                // Add questions for this category
-                categoryQuestions.forEach((question, index) => {
-                    const questionName = `${category.replace(/\s/g, '')}q${index}`;
-                    const questionItem = document.createElement('div');
-                    questionItem.className = 'question-item';
+                // Clear previous questions
+                const questionsDiv = document.getElementById('questions');
+                questionsDiv.innerHTML = '';
 
-                    questionItem.innerHTML = `
-                        <div class="question-text">${question}</div>
-                        <div class="star-rating" data-question="${questionName}">
-                            ${[6, 5, 4, 3, 2, 1].map(value => `
-                                <input type="radio" name="${questionName}" value="${value}" id="${questionName}star${value}" onchange="updateQuestionStatus(this)">
-                                <label for="${questionName}star${value}"><i class="bi bi-star-fill"></i></label>
-                            `).join('')}
-                        </div>
-                        <div class="rating-value">
-                            <span>Poor</span>
-                            <span>Excellent</span>
-                        </div>
-                    `;
+                // Start the table structure with a more modern design
+                let tableHtml = `
+                <table class="table evaluation-table">
+                    <thead>
+                        <tr>
+                            <th width="20%">Category</th>
+                            <th width="50%">Question</th>
+                            <th width="30%">Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
 
-                    categorySection.appendChild(questionItem);
-                });
-
-                evaluationForm.appendChild(categorySection);
-            }
-
-            // Show the modal
-            const evaluationModal = new bootstrap.Modal(document.getElementById('evaluationModal'));
-            evaluationModal.show();
-
-            // Setup scroll event for floating progress indicator
-            const modalBody = document.querySelector('.modal-body');
-            const progressIndicator = document.getElementById('progressIndicator');
-
-            modalBody.addEventListener('scroll', function() {
-                if (modalBody.scrollTop > 200) {
-                    progressIndicator.style.display = 'flex';
-                } else {
-                    progressIndicator.style.display = 'none';
+                // Loop through categories and questions to add them into the table
+                for (const [category, categoryQuestions] of Object.entries(questions)) {
+                    categoryQuestions.forEach((question, index) => {
+                        const questionName = `${category.replace(/\s/g, '')}q${index}`; // Unique name per question
+                        tableHtml += `
+                        <tr>
+                            <td class="${index === 0 ? 'category-cell' : ''}">${index === 0 ? category : ''}</td>
+                            <td>${question}</td>
+                            <td>
+                                <div class="star-rating">
+                                    ${[6, 5, 4, 3, 2, 1].map(value => `
+                                        <input type="radio" name="${questionName}" value="${value}" id="${questionName}star${value}" required>
+                                        <label for="${questionName}star${value}">&#9733;</label>
+                                    `).join('')}
+                                </div>
+                            </td>
+                        </tr>`;
+                    });
                 }
-            });
-        }
 
-        function updateQuestionStatus(input) {
-            if (input.checked) {
-                answeredQuestions++;
-                updateProgress();
+                // Close the table structure
+                tableHtml += `
+                    </tbody>
+                </table>`;
+
+                questionsDiv.innerHTML = tableHtml;
+            } catch (error) {
+                console.error('Error in evaluateEmployee:', error);
+                document.getElementById('questions').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Failed to load evaluation questions. Please try again.
+                    </div>
+                `;
             }
         }
 
-        function updateProgress() {
-            const percentage = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+        // Define calculateAverage function
+        function calculateAverage(category, evaluations) {
+            // Filter evaluations for the current category
+            const categoryEvaluations = evaluations.filter(evaluation => {
+                // Ensure the question name matches the category
+                return evaluation.question.toLowerCase().includes(category.toLowerCase());
+            });
 
-            // Update progress bar in modal
-            document.getElementById('evaluationProgress').style.width = `${percentage}%`;
-            document.getElementById('progressPercentage').textContent = `${percentage}%`;
+            if (categoryEvaluations.length === 0) {
+                console.warn(`No evaluations found for category: ${category}`);
+                return 0; // No evaluations for this category
+            }
 
-            // Update floating progress indicator
-            document.getElementById('floatingProgress').style.width = `${percentage}%`;
-            document.getElementById('floatingPercentage').textContent = `${percentage}%`;
+            // Calculate the average rating
+            const total = categoryEvaluations.reduce((sum, evaluation) => sum + parseFloat(evaluation.rating), 0);
+            const average = total / categoryEvaluations.length;
+            console.log(`Category: ${category}, Average: ${average}`); // Debugging output
+            return average;
         }
 
+        // Function to update progress bar based on completion percentage
+        function updateProgressBar(completionPercentage) {
+            const progressContainer = document.querySelector('.progress-container');
+            const greenProgressBar = document.querySelector('.progress-bar.complete');
+            const progressLabel = greenProgressBar.querySelector('.progress-label');
+            
+            // Update the width of the green progress bar
+            greenProgressBar.style.width = completionPercentage + '%';
+            
+           
+            
+            // Update the progress stats text
+            document.querySelector('.progress-stats div:first-child').textContent = completionPercentage + '% Complete';
+            document.querySelector('.progress-stats div:last-child').textContent = (100 - completionPercentage) + '% Pending';
+        }
+
+        // Your existing submitEvaluation function with improved UX
         function submitEvaluation() {
             const evaluations = [];
-            const evaluationForm = document.getElementById('evaluationForm');
+            const questionsDiv = document.getElementById('questions');
 
-            evaluationForm.querySelectorAll('input[type="radio"]:checked').forEach(input => {
-                evaluations.push({
-                    question: input.name,
-                    rating: input.value
-                });
-            });
-
-            if (evaluations.length !== totalQuestions) {
-                // Show error with number of remaining questions
-                const remaining = totalQuestions - evaluations.length;
-                Swal.fire({
-                    title: 'Incomplete Evaluation',
-                    text: `Please complete all questions. You have ${remaining} question${remaining > 1 ? 's' : ''} remaining.`,
-                    icon: 'warning',
-                    confirmButtonColor: '#4361ee'
-                });
+            // Check if all questions are answered
+            const totalQuestions = questionsDiv.querySelectorAll('.star-rating').length;
+            const answeredQuestions = questionsDiv.querySelectorAll('input[type="radio"]:checked').length;
+            
+            if (answeredQuestions < totalQuestions) {
+                // Show validation message with animation
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Please complete all ${totalQuestions} questions before submitting. You have answered ${answeredQuestions} questions.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                // Insert at the top of the modal body
+                const modalBody = document.querySelector('.modal-body');
+                modalBody.insertBefore(alertDiv, modalBody.firstChild);
+                
+                // Scroll to the top of the modal
+                modalBody.scrollTop = 0;
+                
                 return;
             }
 
+            // Show loading state
+            const submitBtn = document.querySelector('.btn-primary');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
+            submitBtn.disabled = true;
+
+            // Collect all ratings
+            questionsDiv.querySelectorAll('input[type="radio"]:checked').forEach(input => {
+                evaluations.push({
+                    question: input.name, // Question identifier
+                    rating: input.value  // Rating value
+                });
+            });
+
+            // Calculate category averages
             const categoryAverages = {
-                QualityOfWork: calculateAverage('QualityofWork', evaluations),
+                QualityOfWork: calculateAverage('QualityOfWork', evaluations),
                 CommunicationSkills: calculateAverage('CommunicationSkills', evaluations),
                 Teamwork: calculateAverage('Teamwork', evaluations),
                 Punctuality: calculateAverage('Punctuality', evaluations),
                 Initiative: calculateAverage('Initiative', evaluations)
             };
 
+            console.log('Category Averages:', categoryAverages);
+
+            // Get the logged-in employee ID and department
             const employeeId = document.getElementById('employee_id').value;
-            const department = '<?php echo $department; ?>';
+            const department = '<?php echo $department; ?>'; // Use the department from PHP
 
-            // Show loading state
-            const submitBtn = document.querySelector('.btn-submit');
-            const originalBtnText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Submitting...';
-            submitBtn.disabled = true;
-
+            // Submit the evaluation via AJAX
             $.ajax({
                 type: 'POST',
-                url: '../db/submit_evaluation.php',
+                url: '../../employee_db/supervisor/submit_evaluation.php',
                 data: {
                     employee_id: currentEmployeeId,
                     employeeName: currentEmployeeName,
-                    employeePosition: currentEmployeePosition,
+                    employeeRole: currentEmployeeRole,
                     categoryAverages: categoryAverages,
                     employeeId: employeeId,
                     department: department
                 },
                 success: function (response) {
+                    console.log(response);
+                    
                     // Reset button state
-                    submitBtn.innerHTML = originalBtnText;
+                    submitBtn.innerHTML = originalBtnHtml;
                     submitBtn.disabled = false;
-
+                    
                     if (response === 'You have already evaluated this employee.') {
-                        Swal.fire({
-                            title: 'Already Evaluated',
-                            text: response,
-                            icon: 'info',
-                            confirmButtonColor: '#4361ee'
-                        });
+                        // Show error message
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-warning alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${response}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        `;
+                        
+                        // Insert at the top of the modal body
+                        const modalBody = document.querySelector('.modal-body');
+                        modalBody.insertBefore(alertDiv, modalBody.firstChild);
                     } else {
-                        // Close the modal
-                        bootstrap.Modal.getInstance(document.getElementById('evaluationModal')).hide();
+                        // Add the evaluated employee's ID to the evaluatedEmployees array
+                        evaluatedEmployees.push(currentEmployeeId);
 
-                        // Show success message
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Evaluation submitted successfully!',
-                            icon: 'success',
-                            confirmButtonColor: '#4361ee'
-                        }).then(() => {
-                            // Reload the page to update the UI
-                            location.reload();
-                        });
+                        // Disable the button for this employee on the page
+                        const evaluateButton = document.querySelector(`button[onclick*="${currentEmployeeId}"]`);
+                        if (evaluateButton) {
+                            evaluateButton.disabled = true;
+                            evaluateButton.innerHTML = '<i class="fas fa-check-circle"></i> Evaluated';
+                        }
+
+                        // Update the status badge
+                        const statusCell = evaluateButton.closest('tr').querySelector('td:nth-child(4)');
+                        statusCell.innerHTML = `
+                            <span class="status-badge completed">
+                                <i class="fas fa-check-circle"></i> Completed
+                            </span>
+                        `;
+
+                        // Update the stats
+                        const evaluatedCount = evaluatedEmployees.length;
+                        const totalEmployees = <?php echo $totalEmployees; ?>;
+                        const pendingCount = totalEmployees - evaluatedCount;
+                        const completionPercentage = Math.round((evaluatedCount / totalEmployees) * 100);
+                        const pendingPercentage = 100 - completionPercentage;
+                        
+                        // Update the stats cards
+                        document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = evaluatedCount;
+                        document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = pendingCount;
+                        
+                        // Update the progress bar with the new percentage
+                        updateProgressBar(completionPercentage);
+
+                        // Show success message with toast
+                        const toastContainer = document.createElement('div');
+                        toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+                        toastContainer.style.zIndex = '1050';
+                        toastContainer.innerHTML = `
+                            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                                <div class="toast-header bg-success text-white">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong class="me-auto">Success</strong>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                                </div>
+                                <div class="toast-body">
+                                    Evaluation for ${currentEmployeeName} has been submitted successfully.
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(toastContainer);
+                        
+                        // Auto-hide toast after 5 seconds
+                        setTimeout(() => {
+                            const toast = document.querySelector('.toast');
+                            if (toast) {
+                                toast.classList.remove('show');
+                                setTimeout(() => {
+                                    toastContainer.remove();
+                                }, 500);
+                            }
+                        }, 5000);
+
+                        // Hide the modal after submission
+                        $('#evaluationModal').modal('hide');
                     }
                 },
                 error: function (err) {
-                    // Reset button state
-                    submitBtn.innerHTML = originalBtnText;
-                    submitBtn.disabled = false;
-
                     console.error(err);
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'An error occurred while submitting the evaluation.',
-                        icon: 'error',
-                        confirmButtonColor: '#4361ee'
-                    });
+                    
+                    // Reset button state
+                    submitBtn.innerHTML = originalBtnHtml;
+                    submitBtn.disabled = false;
+                    
+                    // Show error message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        <i class="fas fa-times-circle me-2"></i>
+                        An error occurred while submitting the evaluation. Please try again.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    
+                    // Insert at the top of the modal body
+                    const modalBody = document.querySelector('.modal-body');
+                    modalBody.insertBefore(alertDiv, modalBody.firstChild);
                 }
             });
         }
 
-        function calculateAverage(category, evaluations) {
-            const categoryEvaluations = evaluations.filter(evaluation => evaluation.question.startsWith(category));
+        // Search functionality
+        document.querySelector('.search-input').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.employees-table tbody tr');
+            
+            rows.forEach(row => {
+                const name = row.querySelector('td:first-child').textContent.toLowerCase();
+                const position = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const role = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || position.includes(searchTerm) || role.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
 
-            if (categoryEvaluations.length === 0) {
-                return 0;
-            }
-
-            const total = categoryEvaluations.reduce((sum, evaluation) => sum + parseInt(evaluation.rating), 0);
-            return total / categoryEvaluations.length;
-        }
+        // Initialize any tooltips and check progress bar on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips if Bootstrap 5 is used
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Check if we need to update the progress bar color on page load
+            const completionPercentage = <?php echo $completionPercentage; ?>;
+            updateProgressBar(completionPercentage);
+        });
     </script>
-
-    <!-- SweetAlert2 for better alerts -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 </body>
-
 </html>
+

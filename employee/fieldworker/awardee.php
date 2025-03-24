@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Fieldworker') {
     header("Location: ../../login.php");
     exit();
 }
@@ -1076,7 +1076,7 @@ function getComments($conn, $employeeId) {
 <body class="sb-nav-fixed bg-black">
     <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
-    
+        <?php include 'sidebar.php'; ?>
     <div id="layoutSidenav_content">
         <main class="container-fluid position-relative bg-black">
             <div class="container text-light">
@@ -1333,7 +1333,7 @@ function getComments($conn, $employeeId) {
 });
 
 function selectReaction(reaction, employeeId) {
-    fetch('../staff/save_reaction.php', {
+    fetch('../fieldworker/save_reaction.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -1438,7 +1438,7 @@ function addNotificationToDropdown(notification) {
 
    // Function to fetch and display comments with time ago format
    function fetchComments(employeeId) {
-    fetch('../staff/fetch_comments.php', {
+    fetch('../fieldworker/fetch_comments.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -1636,7 +1636,7 @@ function addNotificationToDropdown(notification) {
     });
 
     function updateReactionCount(employeeId) {
-    fetch('../staff/fetch_reaction_count.php', {
+    fetch('../fieldworker/fetch_reaction_count.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

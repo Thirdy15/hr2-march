@@ -258,7 +258,7 @@ $notifications = $notificationStmt->get_result();
                             <a href="${feature.link}" class="list-group-item list-group-item-action">
                                 ${feature.name}
                                 <br>
-                                <small class="text-muted">${feature.path}</small>
+                                <small class="text-white">${feature.path}</small>
                             </a>`;
                     });
                 } else {

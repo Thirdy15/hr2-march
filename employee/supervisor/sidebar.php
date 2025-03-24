@@ -2,7 +2,7 @@
             <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
                 <div class="sb-sidenav-menu">
                     <div class="nav">
-                        <div class="sb-sidenav-menu-heading text-center text-muted">Profile</div>
+                        <div class="sb-sidenav-menu-heading text-center text-white">Profile</div>
                         <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
                             <li class="nav-item dropdown text">
                                 <a class="nav-link dropdown-toggle text-light d-flex justify-content-center ms-4" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -52,7 +52,7 @@
                                 </span>
                             </li>
                         </ul>          
-                        <div class="sb-sidenav-menu-heading text-center text-muted border-top border-secondary mt-3">Employee Dashboard</div> 
+                        <div class="sb-sidenav-menu-heading text-center text-white border-top border-secondary mt-3">Employee Dashboard</div> 
                         <a class="nav-link text-light loading" href="../../employee/supervisor/dashboard.php">
                             <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
                             Dashboard

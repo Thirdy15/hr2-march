@@ -34,7 +34,7 @@ $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
 
 function calculateProgressCircle($averageScore) {
-    return ($averageScore / 10) * 100;
+    return ($averageScore / 6) * 100;
 }
 
 function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) {

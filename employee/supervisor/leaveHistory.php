@@ -17,10 +17,15 @@ $employeeId = $_SESSION['employee_id'];
 $sql = "SELECT employee_id, first_name, middle_name, last_name, role, position, department, phone_number
         FROM employee_register WHERE employee_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $employeeId);
+$stmt->bind_param("i", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
+
+// Pagination variables
+$recordsPerPage = 10;
+$currentPage = isset($_GET['page']) ? $_GET['page'] : 1;
+$offset = ($currentPage - 1) * $recordsPerPage;
 
 // Query for leave requests specific to the logged-in employee
 $searchTerm = isset($_GET['searchTerm']) ? $_GET['searchTerm'] : '';
@@ -59,15 +64,15 @@ if ($timeFrame) {
     }
 }
 
-$sql .= " ORDER BY lr.created_at DESC"; // Ensure latest history is at the top
+$sql .= " ORDER BY lr.created_at DESC LIMIT ? OFFSET ?"; // Add LIMIT and OFFSET for pagination
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     die("Error preparing the query: " . $conn->error);
 }
 
-$bindParams = [$employeeId];
-$bindTypes = "i";
+$bindParams = [$employeeId, $recordsPerPage, $offset];
+$bindTypes = "iii";
 
 if ($searchTerm) {
     $searchTerm = "%$searchTerm%";
@@ -111,6 +116,69 @@ function calculateLeaveDays($start_date, $end_date) {
     }
     return $leave_days;
 }
+
+// Query to get total number of records for pagination
+$totalRecordsSql = "
+    SELECT COUNT(*) as total
+    FROM leave_requests lr
+    JOIN employee_register e ON lr.employee_id = e.employee_id
+    LEFT JOIN employee_register s ON lr.supervisor_id = s.employee_id
+    WHERE lr.employee_id = ?";
+
+if ($searchTerm) {
+    $totalRecordsSql .= " AND (e.first_name LIKE ? OR e.last_name LIKE ? OR lr.employee_id LIKE ?)";
+}
+if ($fromDate) {
+    $totalRecordsSql .= " AND lr.start_date >= ?";
+}
+if ($toDate) {
+    $totalRecordsSql .= " AND lr.end_date <= ?";
+}
+if ($statusFilter) {
+    $totalRecordsSql .= " AND lr.status = ?";
+}
+if ($timeFrame) {
+    if ($timeFrame == 'day') {
+        $totalRecordsSql .= " AND lr.created_at >= CURDATE()";
+    } elseif ($timeFrame == 'week') {
+        $totalRecordsSql .= " AND lr.created_at >= DATE_SUB(CURDATE(), INTERVAL 1 WEEK)";
+    } elseif ($timeFrame == 'month') {
+        $totalRecordsSql .= " AND lr.created_at >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+    }
+}
+
+$totalStmt = $conn->prepare($totalRecordsSql);
+if (!$totalStmt) {
+    die("Error preparing the total records query: " . $conn->error);
+}
+
+$totalBindParams = [$employeeId];
+$totalBindTypes = "i";
+
+if ($searchTerm) {
+    $totalBindParams[] = $searchTerm;
+    $totalBindParams[] = $searchTerm;
+    $totalBindParams[] = $searchTerm;
+    $totalBindTypes .= "sss";
+}
+if ($fromDate) {
+    $totalBindParams[] = $fromDate;
+    $totalBindTypes .= "s";
+}
+if ($toDate) {
+    $totalBindParams[] = $toDate;
+    $totalBindTypes .= "s";
+}
+if ($statusFilter) {
+    $totalBindParams[] = $statusFilter;
+    $totalBindTypes .= "s";
+}
+
+$totalStmt->bind_param($totalBindTypes, ...$totalBindParams);
+$totalStmt->execute();
+$totalResult = $totalStmt->get_result();
+$totalRecords = $totalResult->fetch_assoc()['total'];
+$totalPages = ceil($totalRecords / $recordsPerPage);
 ?>
 
 <!DOCTYPE html>
@@ -456,6 +524,29 @@ function calculateLeaveDays($start_date, $end_date) {
                 margin: 2px 0;
             }
         }
+
+        /* Pagination styling */
+        .pagination {
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pagination .page-item .page-link {
+            background-color: #000000;
+            border: 2px solid #555555;
+            color: #ffffff;
+            transition: all 0.3s;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #222222;
+            border-color: #777777;
+        }
+
+        .pagination .page-item .page-link:hover {
+            background-color: #222222;
+            border-color: #777777;
+        }
     </style>
 </head>
 <body>
@@ -501,6 +592,7 @@ function calculateLeaveDays($start_date, $end_date) {
         <div class="filters-section">
             <h5 class="section-header"><i class="fas fa-filter me-2"></i>Filter Leave Records</h5>
             <form class="row g-3" method="GET" action="">
+                <input type="hidden" name="page" value="1">
                 <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text">
@@ -647,6 +739,33 @@ function calculateLeaveDays($start_date, $end_date) {
                 </table>
             </div>
         </div>
+
+        <!-- Pagination -->
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                <?php if ($currentPage > 1): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="?page=<?php echo $currentPage - 1; ?>&searchTerm=<?php echo $searchTerm; ?>&fromDate=<?php echo $fromDate; ?>&toDate=<?php echo $toDate; ?>&statusFilter=<?php echo $statusFilter; ?>&timeFrame=<?php echo $timeFrame; ?>" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+
+                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <li class="page-item <?php if ($i == $currentPage) echo 'active'; ?>">
+                        <a class="page-link" href="?page=<?php echo $i; ?>&searchTerm=<?php echo $searchTerm; ?>&fromDate=<?php echo $fromDate; ?>&toDate=<?php echo $toDate; ?>&statusFilter=<?php echo $statusFilter; ?>&timeFrame=<?php echo $timeFrame; ?>"><?php echo $i; ?></a>
+                    </li>
+                <?php endfor; ?>
+
+                <?php if ($currentPage < $totalPages): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="?page=<?php echo $currentPage + 1; ?>&searchTerm=<?php echo $searchTerm; ?>&fromDate=<?php echo $fromDate; ?>&toDate=<?php echo $toDate; ?>&statusFilter=<?php echo $statusFilter; ?>&timeFrame=<?php echo $timeFrame; ?>" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+            </ul>
+        </nav>
     </div>
 
     <!-- Delete Confirmation Modal -->
@@ -723,5 +842,3 @@ function calculateLeaveDays($start_date, $end_date) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-
