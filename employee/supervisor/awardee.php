@@ -34,7 +34,7 @@ $result = $stmt->get_result();
 $employeeInfo = $result->fetch_assoc();
 
 function calculateProgressCircle($averageScore) {
-    return ($averageScore / 10) * 100;
+    return ($averageScore / 6) * 100;
 }
 
 function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) {
@@ -45,19 +45,20 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
         return;
     }
 
-    // SQL query to fetch the highest average score for each employee
-    $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, e.email,
-                   AVG(ae.$criterion) AS avg_score,
-                   AVG(ae.quality) AS avg_quality,
-                   AVG(ae.communication_skills) AS avg_communication,
-                   AVG(ae.teamwork) AS avg_teamwork,
-                   AVG(ae.punctuality) AS avg_punctuality,
-                   AVG(ae.initiative) AS avg_initiative
-            FROM employee_register e
-            JOIN evaluations ae ON e.employee_id = ae.employee_id
-            GROUP BY e.employee_id
-            ORDER BY avg_score DESC
-            LIMIT 5"; // Fetch top 5 employees
+        $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, e.email,
+               AVG(ae.$criterion) AS avg_score,
+               AVG(ae.quality) AS avg_quality,
+               AVG(ae.communication_skills) AS avg_communication,
+               AVG(ae.teamwork) AS avg_teamwork,
+               AVG(ae.punctuality) AS avg_punctuality,
+               AVG(ae.initiative) AS avg_initiative,
+               (AVG(ae.quality) + AVG(ae.communication_skills) + AVG(ae.teamwork) + 
+               AVG(ae.punctuality) + AVG(ae.initiative)) / 5 AS overall_average
+        FROM employee_register e
+        JOIN evaluations ae ON e.employee_id = ae.employee_id
+        GROUP BY e.employee_id
+        ORDER BY avg_score DESC
+        LIMIT 5";
 
     $stmt = $conn->prepare($sql);
     if ($stmt === false) {
@@ -90,7 +91,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                 }
 
                 // Calculate percentage for the progress circle
-                $scorePercentage = calculateProgressCircle($row['avg_score']);
+                $scorePercentage = calculateProgressCircle($row['overall_average']);
                 ?>
                 <div class='metrics-container'>
                     <!-- Left metrics -->
@@ -272,17 +273,18 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
 }
 
 function getAllEmployees($conn) {
-    $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, e.email,
-                   AVG(ae.quality) AS avg_quality,
-                   AVG(ae.communication_skills) AS avg_communication,
-                   AVG(ae.teamwork) AS avg_teamwork,
-                   AVG(ae.punctuality) AS avg_punctuality,
-                   AVG(ae.initiative) AS avg_initiative
-            FROM employee_register e
-            JOIN evaluations ae ON e.employee_id = ae.employee_id
-            GROUP BY e.employee_id
-            ORDER BY e.employee_id ASC"; // Fetch all employees
-
+   $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.department, e.pfp, e.email,
+            AVG(ae.quality) AS avg_quality,
+            AVG(ae.communication_skills) AS avg_communication,
+            AVG(ae.teamwork) AS avg_teamwork,
+            AVG(ae.punctuality) AS avg_punctuality,
+            AVG(ae.initiative) AS avg_initiative,
+            (AVG(ae.quality) + AVG(ae.communication_skills) + AVG(ae.teamwork) + 
+            AVG(ae.punctuality) + AVG(ae.initiative)) / 5 AS overall_average
+        FROM employee_register e
+        JOIN evaluations ae ON e.employee_id = ae.employee_id
+        GROUP BY e.employee_id
+        ORDER BY e.employee_id ASC";
     $stmt = $conn->prepare($sql);
     if ($stmt === false) {
         die("Error preparing all employees query: " . $conn->error);
@@ -314,8 +316,7 @@ function getAllEmployees($conn) {
                 }
 
                 // Calculate percentage for the progress circle
-                $scorePercentage = calculateProgressCircle(($row['avg_quality'] + $row['avg_communication'] + $row['avg_teamwork'] + $row['avg_punctuality'] + $row['avg_initiative']) / 5);
-                ?>
+                $scorePercentage = calculateProgressCircle($row['overall_average']);                ?>
                 <div class='metrics-container'>
                     <!-- Left metrics -->
                     <div class='metrics-column'>
@@ -1078,36 +1079,48 @@ function getComments($conn, $employeeId) {
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
-            <main class="container-fluid position-relative bg-black">
-                <div class="container text-light">
-                    <!-- Top Employees for Different Criteria -->
-                    <?php getTopEmployeesByCriterion($conn, 'quality', 'Quality of Work', 1); ?>
-                    <?php getTopEmployeesByCriterion($conn, 'communication_skills', 'Communication Skills', 2); ?>
-                    <?php getTopEmployeesByCriterion($conn, 'teamwork', 'Teamwork', 3); ?>
-                    <?php getTopEmployeesByCriterion($conn, 'punctuality', 'Punctuality', 4); ?>
-                    <?php getTopEmployeesByCriterion($conn, 'initiative', 'Initiative', 5); ?>
-                    <?php getAllEmployees($conn); ?>
-                </div>
-            </main>
-            <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content bg-dark text-light">
-                        <div class="modal-header border-bottom border-secondary">
-                            <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            Are you sure you want to log out?
-                        </div>
-                        <div class="modal-footer border-top border-secondary">
-                            <button type="button" class="btn border-secondary text-light" data-bs-dismiss="modal">Cancel</button>
-                            <form action="../../employee/logout.php" method="POST">
-                                <button type="submit" class="btn btn-danger">Logout</button>
-                            </form>
-                        </div>
+            <div class="container-fluid" id="calendarContainer" 
+                style="position: fixed; top: 7%; right: 40; z-index: 1050; 
+                max-width: 100%; display: none;">
+                <div class="row">
+                    <div class="col-md-9 mx-auto">
+                        <div id="calendar" class="p-2"></div>
                     </div>
                 </div>
             </div>
+            <main class="container-fluid position-relative bg-black">
+                <div class="container text-light">
+                    <!-- Top Employees for Different Criteria -->
+                    <?php getTopEmployeesByCriterion($conn, 'quality', 'Employee of the Month', 1); ?>
+                    <?php getAllEmployees($conn); ?>
+                </div>
+            </main>
+
+            <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-sign-out-alt text-warning" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Are you sure you want to log out?</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="../../employee/logout.php" method="POST">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
             <div class='navigation-buttons'>
                 <button class='btn btn-primary' onclick='showPreviousEmployee(1)' style='font-size: 20px;'><</button>
                 <button class='btn btn-primary' onclick='showNextEmployee(1)' style='font-size: 20px;'>></button>
@@ -1335,7 +1348,7 @@ function getComments($conn, $employeeId) {
     });
 
     function selectReaction(reaction, employeeId) {
-        fetch('../supervisor/save_reaction.php', {
+        fetch('../supervisor/save_reactions.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1645,7 +1658,7 @@ function getComments($conn, $employeeId) {
 
     // Function to update the reaction count
     function updateReactionCount(employeeId) {
-        fetch('../supervisor/fetch_reaction_count.php', {
+        fetch('../supervisor/fetch_reactions.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1671,9 +1684,6 @@ function getComments($conn, $employeeId) {
             .catch(error => console.error('Error:', error));
     }
 </script>
-<!-- Add these lines to your HTML to include the new PHP files -->
-<script src="fetch_comments.php"></script>
-<script src="fetch_reaction_count.php"></script>
 </body>
 </html>
 

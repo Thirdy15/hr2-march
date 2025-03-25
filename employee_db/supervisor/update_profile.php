@@ -20,20 +20,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $phone_number = $_POST['phone_number'];
     $address = $_POST['address'];
 
-// Execute the statement to update user information
-if ($stmt->execute()) {
-    // Set success message in session
-    $_SESSION['update_success'] = "Your information has been updated successfully.";
-} else {
-    // Set error message in session
-    $_SESSION['update_error'] = "Error updating profile: " . $stmt->error;
-}
+    // Execute the statement to update user information
+    if ($stmt->execute()) {
+        // Set success message in session
+        $_SESSION['update_success'] = "Your information has been updated successfully.";
+    } else {
+        // Set error message in session
+        $_SESSION['update_error'] = "Error updating profile: " . $stmt->error;
+    }
 
     // Redirect back to the profile page
     header("Location: ../../employee/supervisor/profile.php");  // Adjust path if needed
     exit();
 }
-
 
 $stmt->close();
 $conn->close();

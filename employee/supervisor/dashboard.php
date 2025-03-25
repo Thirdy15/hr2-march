@@ -536,29 +536,29 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
             
             <!-- Logout Modal -->
             <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-sign-out-alt text-warning fa-2x me-3"></i>
-                                <p class="mb-0">Are you sure you want to log out?</p>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
-                            <form action="../../employee/logout.php" method="POST">
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                </button>
-                            </form>
-                        </div>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-sign-out-alt text-warning" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Are you sure you want to log out?</p>
                     </div>
                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="../../employee/logout.php" method="POST">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </button>
+                    </form>
+                </div>
             </div>
+        </div>
+    </div>
             
             <!-- Attendance Modal -->
             <div class="modal fade" id="attendanceModal" tabindex="-1" aria-labelledby="timeInfoModalLabel" aria-hidden="true">

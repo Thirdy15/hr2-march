@@ -82,7 +82,7 @@ $conn->close();
             --accent-color: #48cae4;
             --grid-color: rgba(73, 80, 87, 0.5);
             --dark-bg: #0a0a0a;
-            --card-bg: #121212;
+            --card-bg: rgba(33, 37, 41) !important;
             --border-color: #2a2a2a;
             --text-primary: #f8f9fa;
             --text-secondary: #adb5bd;
@@ -641,10 +641,10 @@ $conn->close();
                     
                     <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content bg-dark text-light">
+                            <div class="modal-content bg-dark text-muted">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    <button type="button" class="btn-close btn-close-light" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
                                     <div class="text-center mb-3">
@@ -662,6 +662,7 @@ $conn->close();
                         </div>
                     </div>  
                 </div>
+
             </main>
             <?php include 'footer.php'; ?>
         </div>

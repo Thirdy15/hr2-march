@@ -24,7 +24,7 @@
                                 <span class="big text-light mb-1">
                                     <?php
                                         if ($employeeInfo) {
-                                        echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['middlename'] . ' ' . $employeeInfo['lastname']);
+                                        echo htmlspecialchars($employeeInfo['first_name'] . ' ' . $employeeInfo['middle_name'] . ' ' . $employeeInfo['last_name']);
                                         } else {
                                         echo "employee information not available.";
                                         }

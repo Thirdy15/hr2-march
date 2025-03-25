@@ -8,11 +8,6 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['
     exit();
 }
 
-if (isset($_SESSION['update_success'])) {
-    echo '<script>alert("' . htmlspecialchars($_SESSION['update_success']) . '");</script>';
-    unset($_SESSION['update_success']);
-}
-
 // Fetch user info
 $employeeId = $_SESSION['employee_id'];
 $sql = "SELECT
@@ -119,10 +114,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-        }
+
 
         .card-header {
             border-bottom: 1px solid var(--border-color);
@@ -324,6 +316,22 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                 margin-top: 10px;
             }
         }
+        .form-label-group label {
+        position: absolute;
+        top: -10px;
+        left: 10px;
+        background-color: var(--card-bg);
+        padding: 0 8px;
+        font-size: 13px;
+        color: var(--text-secondary);
+        z-index: 1;
+        transition: color 0.3s ease;
+    }
+    
+    /* Class to apply when editing */
+    .form-label-group label.editing {
+        color: var(--text-primary) !important;
+    }
     </style>
 </head>
 <body class="sb-nav-fixed bg-black">
@@ -486,7 +494,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                                             <div class="col-md-4">
                                                 <div class="form-label-group">
                                                     <label>Middle Name</label>
-                                                    <input type="text" class="form-control" id="inputmName" name="middlename"
+                                                    <input type="text" class="form-control" id="inputmName" name="middle_name"
                                                         value="<?php echo htmlspecialchars($employeeInfo['middle_name']); ?>" readonly required>
                                                 </div>
                                             </div>
@@ -680,6 +688,27 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
         </div>
     </div>
 
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="successModalLabel">Success</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Your profile has been updated successfully!</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Modal -->
     <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
@@ -752,100 +781,90 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Edit button functionality
-            const editButton = document.getElementById('editButton');
-            const saveButton = document.getElementById('saveButton');
-            const formInputs = document.querySelectorAll('#infoForm input');
+document.addEventListener('DOMContentLoaded', function() {
+        // Edit button functionality
+        const editButton = document.getElementById('editButton');
+        const saveButton = document.getElementById('saveButton');
+        const formInputs = document.querySelectorAll('#infoForm input');
+        const formLabels = document.querySelectorAll('#infoForm .form-label-group label');
 
-            editButton.addEventListener('click', function() {
-                // Enable all form inputs
-                formInputs.forEach(input => {
-                    input.removeAttribute('readonly');
-                    input.classList.add('border-primary');
-                });
-
-                // Show save button, hide edit button
-                saveButton.classList.remove('d-none');
-                editButton.classList.add('d-none');
+        editButton.addEventListener('click', function() {
+            // Enable all form inputs
+            formInputs.forEach(input => {
+                input.removeAttribute('readonly');
+                input.classList.add('border-primary');
+            });
+            
+            // Make all labels visible by adding the editing class
+            formLabels.forEach(label => {
+                label.classList.add('editing');
             });
 
-            // Confirm save button
-            document.getElementById('confirmSave').addEventListener('click', function() {
-                // Show loading modal
-                const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-                loadingModal.show();
-
-                // Submit the form
-                document.getElementById('infoForm').submit();
-            });
-
-            // Profile picture change
-            document.getElementById('changePictureOption').addEventListener('click', function() {
-                document.getElementById('profilePictureInput').click();
-            });
-
-            // Check for success message
-            <?php if (isset($_SESSION['update_success'])) : ?>
-                // Create a toast notification instead of alert
-                const toastContainer = document.createElement('div');
-                toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
-                toastContainer.style.zIndex = '11';
-
-                toastContainer.innerHTML = `
-                    <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="toast-header bg-success text-white">
-                            <strong class="me-auto">Success</strong>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                        <div class="toast-body">
-                            <?php echo $_SESSION['update_success']; ?>
-                        </div>
-                    </div>
-                `;
-
-                document.body.appendChild(toastContainer);
-
-                // Auto hide after 5 seconds
-                setTimeout(() => {
-                    const toast = document.querySelector('.toast');
-                    const bsToast = new bootstrap.Toast(toast);
-                    bsToast.hide();
-                }, 5000);
-            <?php endif; ?>
+            // Show save button, hide edit button
+            saveButton.classList.remove('d-none');
+            editButton.classList.add('d-none');
         });
 
-        // Show confirmation modal with image preview
-        function showConfirmationModal() {
-            const input = document.getElementById('profilePictureInput');
-            const preview = document.getElementById('modalProfilePicturePreview');
-
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-                    modal.show();
-                }
-
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        // Submit profile picture form
-        function submitProfilePictureForm() {
+        // Confirm save button
+        document.getElementById('confirmSave').addEventListener('click', function() {
+            // Remove editing class from labels when saving
+            formLabels.forEach(label => {
+                label.classList.remove('editing');
+            });
+            
             // Show loading modal
             const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
             loadingModal.show();
 
-            // Hide confirmation modal
-            const confirmationModal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
-            confirmationModal.hide();
-
             // Submit the form
-            document.getElementById('profilePictureForm').submit();
+            document.getElementById('infoForm').submit();
+        });
+
+        // Profile picture change
+        document.getElementById('changePictureOption').addEventListener('click', function() {
+            document.getElementById('profilePictureInput').click();
+        });
+
+        // Check for success message
+        <?php if (isset($_SESSION['update_success'])) : ?>
+            // Show success modal
+            const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+            <?php unset($_SESSION['update_success']); ?>
+        <?php endif; ?>
+    });
+
+    // Show confirmation modal with image preview
+    function showConfirmationModal() {
+        const input = document.getElementById('profilePictureInput');
+        const preview = document.getElementById('modalProfilePicturePreview');
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+                modal.show();
+            }
+
+            reader.readAsDataURL(input.files[0]);
         }
+    }
+
+    // Submit profile picture form
+    function submitProfilePictureForm() {
+        // Show loading modal
+        const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        loadingModal.show();
+
+        // Hide confirmation modal
+        const confirmationModal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+        confirmationModal.hide();
+
+        // Submit the form
+        document.getElementById('profilePictureForm').submit();
+    }
     </script>
 </body>
 </html>

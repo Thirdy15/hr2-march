@@ -932,25 +932,30 @@ $totalWorkMinutes = $totalWorkMinutes % 60;
                     </div>
                 </div>
             </main>
-                <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content bg-dark text-light">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                Are you sure you want to log out?
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn border-secondary text-light" data-bs-dismiss="modal">Cancel</button>
-                                <form action="../../employee/logout.php" method="POST">
-                                    <button type="submit" class="btn btn-danger">Logout</button>
-                                </form>
-                            </div>
-                        </div>
+            <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-sign-out-alt text-warning" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Are you sure you want to log out?</p>
                     </div>
-                </div> 
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="../../employee/logout.php" method="POST">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
             <?php include 'footer.php'; ?>
         </div>
     </div>

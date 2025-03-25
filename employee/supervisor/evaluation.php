@@ -635,7 +635,30 @@ $conn->close();
                         </div>
                     </div>
                 </div>
-            </main>
+            </main> 
+            
+            <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content bg-dark text-light">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                                    <button type="button" class="btn-close btn-close-light" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="text-center mb-3">
+                                        <i class="fas fa-sign-out-alt fa-3x text-warning mb-3"></i>
+                                        <p>Are you sure you want to log out?</p>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                                    <form action="../../employee/logout.php" method="POST">
+                                        <button type="submit" class="btn btn-danger">Logout</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div> 
             
             <!-- Evaluation Modal -->
             <div class="modal fade" id="evaluationModal" tabindex="-1" role="dialog" aria-labelledby="evaluationModalLabel" aria-hidden="true">

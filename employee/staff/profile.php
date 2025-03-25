@@ -3,7 +3,7 @@ session_start();
 include '../../db/db_conn.php';
 include '../../phpqrcode/qrlib.php'; // Include phpqrcode library
 
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Staff') {
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'Supervisor') {
     header("Location: ../../login.php");
     exit();
 }
@@ -189,7 +189,6 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
         .initials-avatar {
             width: 230px;
             height: 230px;
-            margin-left: 30px;
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -278,6 +277,53 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
         * {
             transition: background-color 0.3s, border-color 0.3s, color 0.3s;
         }
+
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .profile-picture, .initials-avatar {
+                width: 180px;
+                height: 180px;
+                margin-top: -50px;
+            }
+
+            .col-lg-3 {
+                margin-top: -50px;
+                padding: 0 1rem;
+            }
+
+            .col-lg-9 {
+                padding: 0 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .profile-picture, .initials-avatar {
+                width: 150px;
+                height: 150px;
+                margin-top: -30px;
+            }
+
+            .col-lg-3, .col-lg-9 {
+                text-align: center;
+                margin-top: 20px;
+            }
+
+            .form-label-group {
+                text-align: left;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .profile-picture, .initials-avatar {
+                width: 120px;
+                height: 120px;
+                margin-top: -20px;
+            }
+
+            .col-lg-3, .col-lg-9 {
+                margin-top: 10px;
+            }
+        }
     </style>
 </head>
 <body class="sb-nav-fixed bg-black">
@@ -314,7 +360,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                                         <div class="col-12 bg-gradient" style="background: linear-gradient(135deg, #4361ee, #3a0ca3); height: 150px; border-radius: 12px 12px 0 0;"></div>
 
                                         <!-- Profile Picture Section -->
-                                        <div class="col-lg-3 text-center" style="margin-top: -75px; padding: 0 2rem;">
+                                        <div class="col-lg-3 text-center d-flex flex-column align-items-center" style="margin-top: -75px; padding: 0 2rem;">
                                             <?php
                                             // Check if a custom profile picture exists
                                             if (!empty($employeeInfo['pfp']) && $employeeInfo['pfp'] !== 'defaultpfp.png') {
@@ -428,7 +474,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                                     </button>
                                 </div>
                                 <div class="card-body">
-                                    <form id="infoForm" action="/HR2/employee_db/staff/update_profile.php" method="post">
+                                    <form id="infoForm" action="/HR2/employee_db/supervisor/update_profile.php" method="post">
                                         <div class="row g-3">
                                             <div class="col-md-4">
                                                 <div class="form-label-group">
@@ -440,7 +486,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                                             <div class="col-md-4">
                                                 <div class="form-label-group">
                                                     <label>Middle Name</label>
-                                                    <input type="text" class="form-control" id="inputmName" name="middlename"
+                                                    <input type="text" class="form-control" id="inputmName" name="middle_name"
                                                         value="<?php echo htmlspecialchars($employeeInfo['middle_name']); ?>" readonly required>
                                                 </div>
                                             </div>
@@ -598,7 +644,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <form action="/HR2/employee_db/staff/delete_employee_pfp.php" method="post">
+                    <form action="/HR2/employee_db/supervisor/delete_employee_pfp.php" method="post">
                         <input type="hidden" name="employeeId" value="<?php echo $employeeInfo['employee_id']; ?>">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-danger">
@@ -647,7 +693,7 @@ QRcode::png($qrData, $qrImagePath, QR_ECLEVEL_L, 4);
     </div>
 
     <!-- Hidden Form for Profile Picture Upload -->
-    <form action="/HR2/employee_db/staff/update_employee_pfp.php" method="post" enctype="multipart/form-data" id="profilePictureForm" style="display:none;">
+    <form action="/HR2/employee_db/supervisor/update_employee_pfp.php" method="post" enctype="multipart/form-data" id="profilePictureForm" style="display:none;">
         <input type="file" id="profilePictureInput" name="profile_picture" accept="image/*" onchange="showConfirmationModal();">
     </form>
 
