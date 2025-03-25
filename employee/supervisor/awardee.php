@@ -1072,6 +1072,43 @@ function getComments($conn, $employeeId) {
         .empty-comments p {
             font-size: 16px;
         }
+        /* Dark Modal Styling */
+        .modal-content.bg-dark {
+            background-color: var(--bg-black); /* Use the dark background variable */
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary); /* Ensure text is readable */
+        }
+
+        .modal-header.border-bottom {
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem;
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .modal-footer.border-top {
+            border-top: 1px solid var(--border-color);
+            padding: 1.25rem;
+        }
+
+        .btn-close {
+            color: var(--text-primary);
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+        }
+
     </style>
 </head>
 <body class="sb-nav-fixed bg-black">
@@ -1097,29 +1134,27 @@ function getComments($conn, $employeeId) {
             </main>
 
             <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="text-center mb-3">
-                        <i class="fas fa-sign-out-alt text-warning" style="font-size: 3rem;"></i>
-                        <p class="mt-3">Are you sure you want to log out?</p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <form action="../../employee/logout.php" method="POST">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-sign-out-alt me-2"></i>Logout
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content bg-dark text-light">
+                                <div class="modal-header">
+                                    <h5 class="modal-titleT" id="logoutModalLabel">Confirm Logout</h5>
+                                    <button type="button" class="btn-close btn-close-light" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="text-center mb-3">
+                                        <i class="fas fa-sign-out-alt fa-3x text-warning mb-3"></i>
+                                        <p>Are you sure you want to log out?</p>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                                    <form action="../../employee/logout.php" method="POST">
+                                        <button type="submit" class="btn btn-danger">Logout</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div> 
 
             <div class='navigation-buttons'>
                 <button class='btn btn-primary' onclick='showPreviousEmployee(1)' style='font-size: 20px;'><</button>

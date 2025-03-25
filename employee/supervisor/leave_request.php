@@ -494,6 +494,43 @@ if (isset($_GET['leave_id']) && isset($_GET['status'])) {
         .bs-tooltip-top .tooltip-arrow::before {
             border-top-color: var(--border-color);
         }
+                /* Dark Modal Styling */
+        .modal-content.bg-dark {
+            background-color: var(--bg-black); /* Use the dark background variable */
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary); /* Ensure text is readable */
+        }
+
+        .modal-header.border-bottom {
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem;
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .modal-footer.border-top {
+            border-top: 1px solid var(--border-color);
+            padding: 1.25rem;
+        }
+
+        .btn-close {
+            color: var(--text-primary);
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+        }
+
     </style>
 </head>
 <body class="sb-nav-fixed">
@@ -892,37 +929,39 @@ if (isset($_GET['leave_id']) && isset($_GET['status'])) {
                 </div>
             </div>
             <!-- Logout Modal -->
-            <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="text-center mb-3">
-                        <i class="fas fa-sign-out-alt text-warning" style="font-size: 3rem;"></i>
-                        <p class="mt-3">Are you sure you want to log out?</p>
+        <!-- Logout Modal -->
+        <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header">
+                        <h5 class="modal-titleT" id="logoutModalLabel">Confirm Logout</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <form action="../../employee/logout.php" method="POST">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-sign-out-alt me-2"></i>Logout
-                        </button>
-                    </form>
+                    <div class="modal-body">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-sign-out-alt text-warning" style="font-size: 3rem;"></i>
+                            <p class="mt-3">Are you sure you want to log out?</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form action="../../employee/logout.php" method="POST">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+
             <?php include 'footer.php'; ?>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
-    <script src="../js/admin.js"></script>
+    <script src="../../js/admin.js"></script>
     <script>
         // Initialize tooltips
         document.addEventListener('DOMContentLoaded', function() {
